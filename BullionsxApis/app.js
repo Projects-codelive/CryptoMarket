@@ -22,6 +22,8 @@ const allowedOrigins = process.env.CORS_ORIGINS
 app.use(cors({
   origin: allowedOrigins,
   credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token'],
+  exposedHeaders: ['x-auth-token'],
 }));
 app.use(express.json());
 
