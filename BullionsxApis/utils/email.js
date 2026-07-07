@@ -1,6 +1,5 @@
 const https = require('https');
 
-const RESEND_API = 'https://api.resend.com/emails';
 const USE_SMTP = !!process.env.EMAIL_HOST;
 
 let transporter = null;
@@ -34,7 +33,7 @@ if (USE_SMTP) {
   })();
 }
 
-function sendViaResend(email, otp, purpose) {
+function sendViaMailtrap(email, otp, purpose) {
   const subjects = {
     'register': `Your NiveshBay Registration OTP - ${otp}`,
     'reset-password': `Your NiveshBay Password Reset OTP - ${otp}`,
@@ -45,19 +44,18 @@ function sendViaResend(email, otp, purpose) {
 
   return new Promise((resolve, reject) => {
     const data = JSON.stringify({
-      from: `NiveshBay <${process.env.EMAIL_FROM}>`,
-      to: [email],
+      from: { email: process.env.EMAIL_FROM, name: 'NiveshBay' },
+      to: [{ email }],
       subject: subjects[purpose] || `Your NiveshBay OTP - ${otp}`,
       text: body,
     });
 
-    const url = new URL(RESEND_API);
     const req = https.request({
-      hostname: url.hostname,
-      path: url.pathname,
+      hostname: 'send.api.mailtrap.io',
+      path: '/api/send',
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+        'Authorization': `Bearer ${process.env.MAILTRAP_API_TOKEN}`,
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(data),
       },
@@ -66,7 +64,7 @@ function sendViaResend(email, otp, purpose) {
       res.on('data', (c) => chunk += c);
       res.on('end', () => {
         if (res.statusCode === 200) resolve(JSON.parse(chunk));
-        else reject(new Error(`Resend API ${res.statusCode}: ${chunk}`));
+        else reject(new Error(`Mailtrap API ${res.statusCode}: ${chunk}`));
       });
     });
     req.on('error', reject);
@@ -76,8 +74,8 @@ function sendViaResend(email, otp, purpose) {
 }
 
 async function sendOtpEmail(email, otp, purpose) {
-  if (process.env.RESEND_API_KEY) {
-    return sendViaResend(email, otp, purpose);
+  if (process.env.MAILTRAP_API_TOKEN) {
+    return sendViaMailtrap(email, otp, purpose);
   }
   if (transporter) {
     const subjects = {
@@ -94,7 +92,7 @@ async function sendOtpEmail(email, otp, purpose) {
     });
     return;
   }
-  throw new Error('No email method configured. Set RESEND_API_KEY or EMAIL_HOST');
+  throw new Error('No email method configured. Set MAILTRAP_API_TOKEN or EMAIL_HOST');
 }
 
 module.exports = { sendOtpEmail };
