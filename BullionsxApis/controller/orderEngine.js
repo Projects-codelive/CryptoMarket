@@ -303,7 +303,7 @@ async function matchAndSettle(conn, newOrder, buyFeesPct, sellFeesPct, quoteSymb
     }
 
     const now = new Date();
-    const utcStr = now.toISOString();
+    const utcStr = now.toISOString().replace('T', ' ').substring(0, 19);
     const unixTs = Math.floor(now.getTime() / 1000);
 
     const buyerLog = {
