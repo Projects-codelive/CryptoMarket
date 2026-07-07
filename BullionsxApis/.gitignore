@@ -2,7 +2,8 @@
 node_modules
 
 # Environment & Config
-config
+config/.env
+config/*.json
 
 # Env files
 .env
