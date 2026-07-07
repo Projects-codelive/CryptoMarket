@@ -7,6 +7,7 @@ export default function SellForm({ symbol, currentPrice, baseBalance, user, onOr
   const [amount, setAmount] = useState('');
   const [price, setPrice] = useState('');
   const [slider, setSlider] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (fillData) {
@@ -36,7 +37,8 @@ export default function SellForm({ symbol, currentPrice, baseBalance, user, onOr
   }
 
   async function handleSell() {
-    if (!user || !amount || !symbol) return;
+    if (!user || !amount || !symbol || submitting) return;
+    setSubmitting(true);
     try {
       const dbSymbol = symbol.replace('-', '_');
 
@@ -59,6 +61,8 @@ export default function SellForm({ symbol, currentPrice, baseBalance, user, onOr
       }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Sell order placement failed');
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -137,10 +141,13 @@ export default function SellForm({ symbol, currentPrice, baseBalance, user, onOr
 
       <button
         onClick={handleSell}
-        disabled={amountNum <= 0 || !user}
-        className="w-full bg-[#f6465d] hover:bg-[#ff5a72] disabled:bg-[#1e2433] disabled:text-[#848e9c] disabled:opacity-40 text-white font-bold py-3 rounded-lg text-sm transition mt-4 shadow-lg cursor-pointer"
+        disabled={amountNum <= 0 || !user || submitting}
+        className="w-full bg-[#f6465d] hover:bg-[#ff5a72] disabled:bg-[#1e2433] disabled:text-[#848e9c] disabled:opacity-40 text-white font-bold py-3 rounded-lg text-sm transition mt-4 shadow-lg cursor-pointer flex items-center justify-center gap-2"
       >
-        {isMarket ? 'Market Sell' : 'Limit Sell'} {coin}
+        {submitting && (
+          <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+        )}
+        {submitting ? 'Placing Order...' : `${isMarket ? 'Market Sell' : 'Limit Sell'} ${coin}`}
       </button>
     </div>
   );
