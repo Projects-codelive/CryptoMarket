@@ -3,7 +3,13 @@ const http = require('http');
 const cors = require('cors');
 const { Server } = require('socket.io');
 const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, 'config', '.env') });
+const fs = require('fs');
+
+const envPath = path.join(__dirname, 'config', '.env');
+if (fs.existsSync(envPath)) {
+  require('dotenv').config({ path: envPath });
+}
+
 const error = require('./middleware/error');
 const router = require('./router/router');
 
@@ -18,6 +24,8 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
+
+app.get('/health', (_req, res) => res.status(200).json({ status: 'ok' }));
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -61,7 +69,7 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`Your application is running on PORT ${PORT}`);
   startPriceFeed(io, parseInt(process.env.PRICE_FEED_INTERVAL_MS || '5000'));
   startStakingPayout(io, parseInt(process.env.STAKING_PAYOUT_INTERVAL_MS || '60000'));
