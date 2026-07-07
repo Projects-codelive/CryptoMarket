@@ -182,7 +182,7 @@ exports.getPortfolio = asyncMiddleware(async (req, res) => {
         }
 
         const [feeRows] = await conn.query(
-            'SELECT COALESCE(SUM(transaction_fees), 0) AS total_fees FROM dbt_balance_log WHERE user_id = ? AND transaction_type IN ("TRADE_BUY", "TRADE_SELL")',
+            "SELECT COALESCE(SUM(transaction_fees), 0) AS total_fees FROM dbt_balance_log WHERE user_id = ? AND transaction_type IN ('TRADE_BUY', 'TRADE_SELL')",
             [userId]
         );
         const totalFeesPaid = parseFloat(feeRows[0]?.total_fees || 0);

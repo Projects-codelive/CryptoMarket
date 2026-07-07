@@ -452,7 +452,7 @@ exports.placeBuyOrder = async (req, res) => {
 
     const openDate = new Date();
     const [insertResult] = await conn.query(
-      'INSERT INTO dbt_biding (bid_type, bid_price, bid_qty, bid_qty_available, total_amount, amount_available, currency_symbol, market_symbol, user_id, open_order, fees_amount, status) VALUES ("BUY", ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 2)',
+      "INSERT INTO dbt_biding (bid_type, bid_price, bid_qty, bid_qty_available, total_amount, amount_available, currency_symbol, market_symbol, user_id, open_order, fees_amount, status) VALUES ('BUY', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 2)",
       [finalRate, qty, qty, totalAmount, totalAmount, coinSymbol, market, userId, openDate, feesAmount]
     );
 
@@ -594,7 +594,7 @@ exports.placeSellOrder = async (req, res) => {
     const openDate = new Date();
 
     const [insertResult] = await conn.query(
-      'INSERT INTO dbt_biding (bid_type, bid_price, bid_qty, bid_qty_available, total_amount, amount_available, currency_symbol, market_symbol, user_id, open_order, fees_amount, status) VALUES ("SELL", ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 2)',
+      "INSERT INTO dbt_biding (bid_type, bid_price, bid_qty, bid_qty_available, total_amount, amount_available, currency_symbol, market_symbol, user_id, open_order, fees_amount, status) VALUES ('SELL', ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 2)",
       [finalRate, qty, qty, totalAmount, totalAmount, coinSymbol, market, userId, openDate]
     );
 
