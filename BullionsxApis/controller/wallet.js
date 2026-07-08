@@ -115,7 +115,7 @@ exports.getCoinDetail = async (req, res) => {
     const userId = req.user.user_id;
     const { symbol } = req.params;
 
-    const [coins] = await conn.query('SELECT * FROM dbt_cryptocoin WHERE symbol = ? AND status = 1', [symbol]);
+    const [coins] = await conn.query('SELECT * FROM dbt_cryptocoin WHERE coin_symbol = ? AND status = 1', [symbol]);
     const coinName = coins.length ? (coins[0].coin_name || coins[0].name || symbol) : symbol;
 
     await ensureBalanceRow(conn, userId, symbol);
@@ -246,7 +246,7 @@ exports.initiateWithdraw = async (req, res) => {
     await conn.beginTransaction();
 
     // 1. Coin exists and is active (check dbt_cryptocoin or user's balance for fiat)
-    let [coinRows] = await conn.query('SELECT * FROM dbt_cryptocoin WHERE symbol = ? AND status = 1', [coin]);
+    let [coinRows] = await conn.query('SELECT * FROM dbt_cryptocoin WHERE coin_symbol = ? AND status = 1', [coin]);
     if (!coinRows.length) {
       const [userBal] = await conn.query('SELECT id FROM dbt_balance WHERE user_id = ? AND currency_symbol = ?', [userId, coin]);
       if (!userBal.length) {
@@ -449,8 +449,8 @@ exports.confirmWithdraw = async (req, res) => {
 
     const txnId = 'WD' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
     await conn.query(
-      'INSERT INTO tbl_withdraw (user_id, sym, amount, amount_with_fee, tx, dateold, date, fees, blockchainbalance, remarks, clicked, address, status, charge, net_amount, txn_id) VALUES (?, ?, ?, ?, ?, ?, NOW(), 0, \'\', \'\', 0, ?, ?, ?, ?, ?)',
-      [userId, coin, amount, amount, txnId, '', address, 'pending', withdrawFee, amount - withdrawFee, txnId]
+      'INSERT INTO tbl_withdraw (user_id, currency, amount, charge, net_amount, txn_id, address, status, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())',
+      [userId, coin, amount, withdrawFee, amount - withdrawFee, txnId, address, 'pending']
     );
 
     await conn.commit();
@@ -481,7 +481,7 @@ exports.getWithdrawals = async (req, res) => {
 
     let query = 'SELECT * FROM tbl_withdraw WHERE user_id = ?';
     const params = [userId];
-    if (coin) { query += ' AND sym = ?'; params.push(coin); }
+    if (coin) { query += ' AND currency = ?'; params.push(coin); }
     query += ' ORDER BY date DESC LIMIT ? OFFSET ?';
     params.push(parseInt(limit), parseInt(offset));
 

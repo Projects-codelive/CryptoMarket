@@ -271,11 +271,19 @@ router
   .route('/api/v1/debug/db-check')
   .get(async (_req, res) => {
     try {
-      const conn = await connect();
+      const pool = await connect();
+      const conn = await pool.getConnection();
       const [networks] = await conn.query('SELECT * FROM dbt_coin_network');
       const [cols] = await conn.query("SHOW COLUMNS FROM dbt_coin_network");
+      const [cryptoCols] = await conn.query("SHOW COLUMNS FROM dbt_cryptocoin");
+      const [withdrawCols] = await conn.query("SHOW COLUMNS FROM tbl_withdraw");
       conn.release();
-      res.json({ coin_network_cols: cols.map(c => c.Field), networks });
+      res.json({
+        dbt_cryptocoin_columns: cryptoCols.map(c => c.Field),
+        tbl_withdraw_columns: withdrawCols.map(c => c.Field),
+        dbt_coin_network_columns: cols.map(c => c.Field),
+        dbt_coin_network_data: networks
+      });
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
