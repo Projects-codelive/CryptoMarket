@@ -7,6 +7,7 @@ const pool = createPool({
     port: parseInt(process.env.DB_PORT || '3306'),
     waitForConnections: true,
     connectionLimit: parseInt(process.env.DB_POOL_LIMIT || '10'),
-    queueLimit: 0
+    queueLimit: 0,
+    ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined
 });
 module.exports = () => pool;

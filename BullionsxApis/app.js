@@ -42,6 +42,8 @@ app.set('io', io);
 app.use('/', router);
 app.use(error);
 
+const dns = require('dns');
+const util = require('util');
 const { ensureStakingSchema } = require('./database/autoMigrate');
 const { startPriceFeed } = require('./services/priceFeed');
 const { startStakingPayout } = require('./services/stakingPayout');
@@ -71,6 +73,16 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
+
+// Check DB host DNS before migration
+const dbHost = process.env.DB_HOST || 'localhost';
+if (dbHost !== 'localhost') {
+  console.log(`[startup] Resolving DB host: ${dbHost}`);
+  const lookup = util.promisify(dns.lookup);
+  lookup(dbHost, { all: true })
+    .then(addrs => console.log(`[startup] DB host resolved to: ${JSON.stringify(addrs.map(a => a.address))}`))
+    .catch(err => console.error(`[startup] DNS resolution FAILED for ${dbHost}:`, err.code));
+}
 
 ensureStakingSchema().then(() => {
   server.listen(PORT, '0.0.0.0', () => {
