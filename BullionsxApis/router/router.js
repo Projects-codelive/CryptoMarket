@@ -265,8 +265,28 @@ router
   .route('/api/v1/admin/withdrawal/:id/reject')
   .patch(auth, adminAuth, adminWithdraw.rejectWithdrawal);
 
-// Debug: check DB state
+// Admin: credit funds
 const connect = require('../config/Mysqlcon');
+router
+  .route('/api/v1/admin/credit')
+  .post(auth, adminAuth, async (req, res) => {
+    try {
+      const { user_id, currency_symbol, amount } = req.body;
+      if (!user_id || !currency_symbol || amount == null) {
+        return res.status(400).json({ message: 'user_id, currency_symbol, amount required' });
+      }
+      const conn = await connect();
+      await conn.query(
+        'INSERT INTO dbt_balance (user_id, currency_symbol, balance, sharewallet, fundwallet) VALUES (?, ?, ?, 0, 0) ON DUPLICATE KEY UPDATE balance = balance + ?',
+        [user_id, currency_symbol, parseFloat(amount), parseFloat(amount)]
+      );
+      res.json({ message: `Credited ${amount} ${currency_symbol} to ${user_id}` });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+// Debug: check DB state
 router
   .route('/api/v1/debug/db-check')
   .get(async (_req, res) => {
