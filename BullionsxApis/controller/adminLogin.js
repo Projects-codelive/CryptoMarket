@@ -11,6 +11,25 @@ if (fs.existsSync(envPath)) {
 const ADMIN_EMAIL = 'admin@gmail.com';
 const ADMIN_PASSWORD = 'Admin123x@';
 
+async function ensureAdminColumn() {
+    try {
+        const pool = await connect();
+        const conn = await pool.getConnection();
+        const [rows] = await conn.query(
+            `SELECT COLUMN_NAME FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'dbt_user' AND COLUMN_NAME = 'is_admin'`,
+            [process.env.DB_NAME || 'trade']
+        );
+        if (!rows.length) {
+            await conn.query('ALTER TABLE dbt_user ADD COLUMN is_admin tinyint(1) DEFAULT 0');
+            console.log('[adminLogin] Added is_admin column to dbt_user');
+        }
+        conn.release();
+    } catch (err) {
+        console.error('[adminLogin] ensureAdminColumn error:', err.message);
+    }
+}
+
 async function generateUserId(conn) {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     for (let attempt = 0; attempt < 20; attempt++) {
@@ -37,6 +56,8 @@ exports.adminLogin = async (req, res) => {
         if (normalizedEmail !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
             return res.status(401).json({ message: 'Invalid admin credentials.' });
         }
+
+        await ensureAdminColumn();
 
         const conn = await connect();
         let [users] = await conn.query("SELECT * FROM dbt_user WHERE email = ?", [normalizedEmail]);

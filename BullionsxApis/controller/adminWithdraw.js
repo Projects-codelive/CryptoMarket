@@ -75,7 +75,7 @@ exports.rejectWithdrawal = async (req, res) => {
 
     await creditWallet(conn, {
       user_id: wd.user_id,
-      currency_symbol: wd.currency,
+      currency_symbol: wd.sym,
       walletType: 'spot',
       amount: refundAmount,
       fees: 0,
@@ -87,7 +87,7 @@ exports.rejectWithdrawal = async (req, res) => {
     if (refundFee > 0) {
       await creditWallet(conn, {
         user_id: wd.user_id,
-        currency_symbol: wd.currency,
+        currency_symbol: wd.sym,
         walletType: 'spot',
         amount: refundFee,
         fees: 0,

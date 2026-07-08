@@ -11,7 +11,7 @@ exports.getOverview = async (req, res) => {
     conn = await pool.getConnection();
     const userId = req.user.user_id;
 
-    const [coins] = await conn.query('SELECT * FROM dbt_cryptocoin WHERE status = 1');
+    const [coins] = await conn.query('SELECT * FROM dbt_cryptocoin ORDER BY coin_position ASC');
     const [balances] = await conn.query('SELECT * FROM dbt_balance WHERE user_id = ?', [userId]);
     const [prices] = await conn.query(
       'SELECT ch.coin_symbol, ch.last_price FROM dbt_coinhistory ch INNER JOIN (SELECT coin_symbol, MAX(id) as maxid FROM dbt_coinhistory GROUP BY coin_symbol) latest ON ch.id = latest.maxid'
@@ -42,34 +42,42 @@ exports.getOverview = async (req, res) => {
     let totalEstimated = 0;
     const overview = [];
 
-    // Add INR first
-    const inrBal = balMap['INR'] || { spot: 0, funding: 0, share: 0 };
-    const inrInTrade = lockedMap['INR'] || 0;
-    const inrTotal = inrBal.spot + inrBal.funding + inrBal.share + inrInTrade;
-    overview.push({
-      coin: 'INR',
-      name: 'Indian Rupee',
-      spot: inrBal.spot,
-      funding: inrBal.funding,
-      share: inrBal.share,
-      inTrade: inrInTrade,
-      total: inrTotal,
-      price: 1,
-      usdValue: inrTotal,
-    });
-    totalEstimated += inrTotal;
-
-    // Add crypto coins
     coins.forEach(coin => {
-      const bal = balMap[coin.coin_symbol] || { spot: 0, funding: 0, share: 0 };
-      const price = priceMap[coin.coin_symbol] || 0;
-      const inTrade = lockedMap[coin.coin_symbol] || 0;
+      const sym = coin.symbol || coin.coin_symbol;
+      if (!sym) return;
+      const bal = balMap[sym] || { spot: 0, funding: 0, share: 0 };
+      const price = sym === 'INR' ? 1 : (priceMap[sym] || 0);
+      const inTrade = lockedMap[sym] || 0;
       const total = bal.spot + bal.funding + bal.share + inTrade;
       const usdValue = total * price;
       totalEstimated += usdValue;
       overview.push({
-        coin: coin.coin_symbol,
-        name: coin.coin_name,
+        coin: sym,
+        name: coin.coin_name || coin.name || sym,
+        spot: bal.spot,
+        funding: bal.funding,
+        share: bal.share,
+        inTrade,
+        total,
+        price,
+        usdValue,
+      });
+    });
+
+    // Add any currencies from balance not in dbt_cryptocoin
+    const added = new Set(coins.map(c => c.symbol || c.coin_symbol).filter(Boolean));
+    balances.forEach(b => {
+      if (added.has(b.currency_symbol)) return;
+      added.add(b.currency_symbol);
+      const bal = balMap[b.currency_symbol] || { spot: 0, funding: 0, share: 0 };
+      const price = priceMap[b.currency_symbol] || 0;
+      const inTrade = lockedMap[b.currency_symbol] || 0;
+      const total = bal.spot + bal.funding + bal.share + inTrade;
+      const usdValue = total * price;
+      totalEstimated += usdValue;
+      overview.push({
+        coin: b.currency_symbol,
+        name: b.currency_symbol,
         spot: bal.spot,
         funding: bal.funding,
         share: bal.share,
@@ -102,15 +110,18 @@ exports.getCoinDetail = async (req, res) => {
     const userId = req.user.user_id;
     const { symbol } = req.params;
 
-    const [coins] = await conn.query('SELECT * FROM dbt_cryptocoin WHERE coin_symbol = ? AND status = 1', [symbol]);
-    const coinName = coins.length ? coins[0].coin_name : symbol;
+    const [coins] = await conn.query('SELECT * FROM dbt_cryptocoin WHERE symbol = ? AND status = 1', [symbol]);
+    const coinName = coins.length ? (coins[0].coin_name || coins[0].name || symbol) : symbol;
 
     await ensureBalanceRow(conn, userId, symbol);
 
     const [balRows] = await conn.query('SELECT * FROM dbt_balance WHERE user_id = ? AND currency_symbol = ?', [userId, symbol]);
     const bal = balRows[0] || { balance: 0, fundwallet: 0, sharewallet: 0 };
 
-    const [networks] = await conn.query('SELECT * FROM dbt_coin_network WHERE coin_symbol = ? AND status = 1', [symbol]);
+    let networks = [];
+    try {
+        [networks] = await conn.query('SELECT * FROM dbt_coin_network WHERE coin_symbol = ? AND status = 1', [symbol]);
+    } catch (_) { networks = []; }
 
     const [priceRows] = await conn.query(
       'SELECT last_price FROM dbt_coinhistory WHERE coin_symbol = ? ORDER BY id DESC LIMIT 1', [symbol]
@@ -227,11 +238,15 @@ exports.initiateWithdraw = async (req, res) => {
     conn = await pool.getConnection();
     await conn.beginTransaction();
 
-    // 1. Coin exists and is active
-    const [coinRows] = await conn.query('SELECT * FROM dbt_cryptocoin WHERE coin_symbol = ? AND status = 1', [coin]);
+    // 1. Coin exists and is active (check dbt_cryptocoin or user's balance for fiat)
+    let [coinRows] = await conn.query('SELECT * FROM dbt_cryptocoin WHERE symbol = ? AND status = 1', [coin]);
     if (!coinRows.length) {
-      await conn.rollback(); conn.release();
-      return res.status(404).json({ status: 0, message: 'Coin not found or inactive.' });
+      const [userBal] = await conn.query('SELECT id FROM dbt_balance WHERE user_id = ? AND currency_symbol = ?', [userId, coin]);
+      if (!userBal.length) {
+        await conn.rollback(); conn.release();
+        return res.status(404).json({ status: 0, message: 'Coin not found or inactive.' });
+      }
+      coinRows = [{ symbol: coin }];
     }
 
     // 2. Network exists with withdraw_status = 1
@@ -428,8 +443,8 @@ exports.confirmWithdraw = async (req, res) => {
 
     const txnId = 'WD' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
     await conn.query(
-      'INSERT INTO tbl_withdraw (user_id, currency, amount, charge, net_amount, txn_id, address, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [userId, coin, amount, withdrawFee, amount - withdrawFee, txnId, address, 'pending']
+      'INSERT INTO tbl_withdraw (user_id, sym, amount, amount_with_fee, tx, dateold, date, fees, blockchainbalance, remarks, clicked, address, status, charge, net_amount, txn_id) VALUES (?, ?, ?, ?, ?, ?, NOW(), 0, \'\', \'\', 0, ?, ?, ?, ?, ?)',
+      [userId, coin, amount, amount, txnId, '', address, 'pending', withdrawFee, amount - withdrawFee, txnId]
     );
 
     await conn.commit();
@@ -460,7 +475,7 @@ exports.getWithdrawals = async (req, res) => {
 
     let query = 'SELECT * FROM tbl_withdraw WHERE user_id = ?';
     const params = [userId];
-    if (coin) { query += ' AND currency = ?'; params.push(coin); }
+    if (coin) { query += ' AND sym = ?'; params.push(coin); }
     query += ' ORDER BY date DESC LIMIT ? OFFSET ?';
     params.push(parseInt(limit), parseInt(offset));
 

@@ -19,7 +19,7 @@ export default function WalletOverviewPage() {
     if (hideZero) list = list.filter(c => c.total > 0);
     if (search.trim()) {
       const q = search.toLowerCase();
-      list = list.filter(c => c.coin.toLowerCase().includes(q) || c.name.toLowerCase().includes(q));
+      list = list.filter(c => (c.coin || '').toLowerCase().includes(q) || (c.name || '').toLowerCase().includes(q));
     }
     return list;
   }, [overview, hideZero, search]);
@@ -107,14 +107,14 @@ export default function WalletOverviewPage() {
             </thead>
             <tbody>
               {filtered.map((c) => (
-                <tr key={c.coin} className="border-b border-[#1e2433] hover:bg-[#1e2433]/50 transition cursor-pointer" onClick={() => navigate(`/wallet/deposit/${c.coin}`)}>
+                <tr key={c.coin || c.name || Math.random()} className="border-b border-[#1e2433] hover:bg-[#1e2433]/50 transition cursor-pointer" onClick={() => c.coin && navigate(`/wallet/deposit/${c.coin}`)}>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <div className="w-7 h-7 rounded-full bg-[#1e2330] border border-[#2b3548] flex items-center justify-center text-xs font-bold text-[#f0b90b]">
-                        {c.coin[0]}
+                        {c.coin?.[0] || '?'}
                       </div>
                       <div>
-                        <p className="text-white text-xs font-semibold">{c.coin}</p>
+                        <p className="text-white text-xs font-semibold">{c.coin || '???'}</p>
                         <p className="text-[#848e9c] text-[10px]">{c.name}</p>
                       </div>
                     </div>

@@ -41,6 +41,29 @@ exports.subscribe = async (req, res) => {
 
         const pool = await connect();
         conn = await pool.getConnection();
+
+        // Ensure staking table columns exist (safety net if autoMigrate didn't run)
+        const stakingCols = [
+            ['stake_amount', 'decimal(20,8) NOT NULL'],
+            ['currency_symbol', `varchar(100) NOT NULL DEFAULT 'INR'`],
+            ['apr_percent', 'decimal(10,2) NOT NULL'],
+            ['duration_days', 'int(11) NOT NULL'],
+            ['start_date', 'timestamp NOT NULL DEFAULT current_timestamp()'],
+            ['maturity_date', 'timestamp NULL DEFAULT NULL'],
+            ['status', `enum('ACTIVE','MATURED','CLAIMED','UNSTAKED') NOT NULL DEFAULT 'ACTIVE'`],
+            ['reward_amount', 'decimal(20,8) DEFAULT 0.00000000'],
+            ['claimed_at', 'timestamp NULL DEFAULT NULL'],
+            ['created_at', 'timestamp NOT NULL DEFAULT current_timestamp()'],
+        ];
+        for (const [col, def] of stakingCols) {
+            try { await conn.query(`ALTER TABLE dbt_user_staking ADD COLUMN ${col} ${def}`); }
+            catch (_) {
+                if (col === 'status') {
+                    try { await conn.query(`ALTER TABLE dbt_user_staking MODIFY COLUMN ${col} ${def}`); } catch (_2) {}
+                }
+            }
+        }
+
         await conn.beginTransaction();
 
         const [plans] = await conn.query('SELECT * FROM dbt_staking_plans WHERE id = ? AND status = 1', [plan_id]);

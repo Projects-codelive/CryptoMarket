@@ -42,6 +42,7 @@ app.set('io', io);
 app.use('/', router);
 app.use(error);
 
+const { ensureStakingSchema } = require('./database/autoMigrate');
 const { startPriceFeed } = require('./services/priceFeed');
 const { startStakingPayout } = require('./services/stakingPayout');
 
@@ -71,8 +72,10 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Your application is running on PORT ${PORT}`);
-  startPriceFeed(io, parseInt(process.env.PRICE_FEED_INTERVAL_MS || '5000'));
-  startStakingPayout(io, parseInt(process.env.STAKING_PAYOUT_INTERVAL_MS || '60000'));
+ensureStakingSchema().then(() => {
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`Your application is running on PORT ${PORT}`);
+    startPriceFeed(io, parseInt(process.env.PRICE_FEED_INTERVAL_MS || '5000'));
+    startStakingPayout(io, parseInt(process.env.STAKING_PAYOUT_INTERVAL_MS || '60000'));
+  });
 });

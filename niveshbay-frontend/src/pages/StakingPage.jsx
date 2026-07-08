@@ -13,9 +13,8 @@ export default function StakingPage() {
     const [selectedPlan, setSelectedPlan] = useState(null);
     const [tab, setTab] = useState('plans');
 
-    function handleRefresh() {
-        refreshPlans();
-        refreshMyStaking();
+    async function handleRefresh() {
+        await Promise.all([refreshPlans(), refreshMyStaking()]);
     }
 
     return (

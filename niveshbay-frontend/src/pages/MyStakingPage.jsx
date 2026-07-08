@@ -10,9 +10,8 @@ export default function MyStakingPage() {
     const { plans, isLoading: plansLoading, refreshPlans } = useStakingPlans();
     const [selectedPlan, setSelectedPlan] = useState(null);
 
-    function handleRefresh() {
-        refreshMyStaking();
-        refreshPlans();
+    async function handleRefresh() {
+        await Promise.all([refreshMyStaking(), refreshPlans()]);
     }
 
     if (isLoading || plansLoading) {
@@ -36,13 +35,17 @@ export default function MyStakingPage() {
                 <div>
                     <h2 className="text-sm font-bold text-[#848e9c] uppercase tracking-wider mb-4">Available Plans</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {plans.map(plan => (
-                            <StakingPlanCard
-                                key={plan.id}
-                                plan={plan}
-                                onSubscribe={setSelectedPlan}
-                            />
-                        ))}
+                        {plans.map(plan => {
+                            const subscribed = stakes.some(s => s.plan_id === plan.id && (s.status === 'ACTIVE' || s.status === 'MATURED'));
+                            return (
+                                <StakingPlanCard
+                                    key={plan.id}
+                                    plan={plan}
+                                    subscribed={subscribed}
+                                    onSubscribe={subscribed ? undefined : setSelectedPlan}
+                                />
+                            );
+                        })}
                     </div>
                 </div>
             </div>
