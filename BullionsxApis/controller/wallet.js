@@ -449,7 +449,7 @@ exports.confirmWithdraw = async (req, res) => {
 
     const txnId = 'WD' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
     await conn.query(
-      'INSERT INTO tbl_withdraw (user_id, currency, amount, charge, net_amount, txn_id, address, status, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())',
+      'INSERT INTO tbl_withdraw (user_id, sym, amount, charge, net_amount, txn_id, address, status, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())',
       [userId, coin, amount, withdrawFee, amount - withdrawFee, txnId, address, 'pending']
     );
 
@@ -481,7 +481,7 @@ exports.getWithdrawals = async (req, res) => {
 
     let query = 'SELECT * FROM tbl_withdraw WHERE user_id = ?';
     const params = [userId];
-    if (coin) { query += ' AND currency = ?'; params.push(coin); }
+    if (coin) { query += ' AND sym = ?'; params.push(coin); }
     query += ' ORDER BY date DESC LIMIT ? OFFSET ?';
     params.push(parseInt(limit), parseInt(offset));
 
