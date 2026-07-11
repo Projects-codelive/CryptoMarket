@@ -8,6 +8,47 @@ async function ensureStakingSchema() {
         console.log('[autoMigrate] Running schema checks...');
 
         await conn.query(`
+            CREATE TABLE IF NOT EXISTS dbt_user_verify_doc (
+                id int(11) NOT NULL AUTO_INCREMENT,
+                user_id varchar(100) NOT NULL,
+                full_name varchar(255) NOT NULL,
+                document_type varchar(50) NOT NULL,
+                document_number varchar(100) NOT NULL,
+                dob date DEFAULT NULL,
+                address text DEFAULT NULL,
+                city varchar(100) DEFAULT NULL,
+                state varchar(100) DEFAULT NULL,
+                country varchar(100) DEFAULT NULL,
+                postal_code varchar(20) DEFAULT NULL,
+                status varchar(20) DEFAULT 'pending',
+                created_at timestamp NOT NULL DEFAULT current_timestamp(),
+                updated_at timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+                PRIMARY KEY (id),
+                UNIQUE KEY user_id (user_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+        `);
+        console.log('[autoMigrate] Ensured dbt_user_verify_doc table exists');
+
+        await conn.query(`
+            CREATE TABLE IF NOT EXISTS dbt_user_bank_details (
+                id int(11) NOT NULL AUTO_INCREMENT,
+                user_id varchar(100) NOT NULL,
+                account_holder_name varchar(255) NOT NULL,
+                bank_name varchar(255) NOT NULL,
+                account_number varchar(100) NOT NULL,
+                ifsc_code varchar(50) NOT NULL,
+                branch_name varchar(255) DEFAULT NULL,
+                account_type varchar(50) DEFAULT NULL,
+                upi_id varchar(100) DEFAULT NULL,
+                created_at timestamp NOT NULL DEFAULT current_timestamp(),
+                updated_at timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+                PRIMARY KEY (id),
+                UNIQUE KEY user_id (user_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+        `);
+        console.log('[autoMigrate] Ensured dbt_user_bank_details table exists');
+
+        await conn.query(`
             CREATE TABLE IF NOT EXISTS dbt_user_staking (
                 id int(11) NOT NULL AUTO_INCREMENT,
                 user_id varchar(100) NOT NULL,

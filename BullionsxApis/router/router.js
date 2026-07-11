@@ -197,12 +197,22 @@ router
 
 const stakingRouter = require('./staking');
 
-const { getProfile, updateProfile } = require('../controller/profile');
+const { getProfile, updateProfile, getKyc, saveKyc, getBankDetails, saveBankDetails } = require('../controller/profile');
 
 router
     .route('/profile')
     .get(auth, getProfile)
     .put(auth, updateProfile);
+router
+  .route('/api/v1/kyc')
+  .get(auth, getKyc)
+  .post(auth, saveKyc);
+ 
+router
+  .route('/api/v1/bank-details')
+  .get(auth, getBankDetails)
+  .post(auth, saveBankDetails);
+     
 
 const { getBalanceStats } = require('../controller/balanceStats');
 

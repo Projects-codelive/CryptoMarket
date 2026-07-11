@@ -16,10 +16,17 @@ import StakingPage from './pages/StakingPage';
 import MyStakingPage from './pages/MyStakingPage';
 import AdminStakingPage from './pages/AdminStakingPage';
 import AdminWithdrawalsPage from './pages/AdminWithdrawalsPage';
-import WalletOverviewPage from './pages/wallet/WalletOverviewPage';
-import CoinDepositPage from './pages/wallet/CoinDepositPage';
+
+// ── Wallet pages ──────────────────────────────────────────────────────────────
+// SpotWalletPage  replaces the old WalletOverviewPage (same UI, zero logic change)
+// FundWalletPage  & ShareWalletPage are new read-only wallet views
+import SpotWalletPage  from './pages/wallet/SpotWalletPage';
+import FundWalletPage  from './pages/wallet/FundWalletPage';
+import ShareWalletPage from './pages/wallet/ShareWalletPage';
+import CoinDepositPage  from './pages/wallet/CoinDepositPage';
 import CoinWithdrawPage from './pages/wallet/CoinWithdrawPage';
 import WalletHistoryPage from './pages/wallet/WalletHistoryPage';
+// ─────────────────────────────────────────────────────────────────────────────
 
 function AuthGuard({ children }) {
   const { token, loading } = useAuth();
@@ -35,25 +42,40 @@ function AuthGuard({ children }) {
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/admin/login" element={<AdminLoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      {/* ── Auth ─────────────────────────────────────────────────────── */}
+      <Route path="/login"            element={<LoginPage />} />
+      <Route path="/admin/login"      element={<AdminLoginPage />} />
+      <Route path="/register"         element={<RegisterPage />} />
+      <Route path="/forgot-password"  element={<ForgotPasswordPage />} />
+
+      {/* ── App ──────────────────────────────────────────────────────── */}
       <Route path="/trade/:symbol" element={<AuthGuard><TradePage /></AuthGuard>} />
-      <Route path="/trade" element={<Navigate to="/trade/SOL-INR" replace />} />
-      <Route path="/markets" element={<AuthGuard><MarketsPage /></AuthGuard>} />
-      <Route path="/leaderboard" element={<AuthGuard><LeaderboardPage /></AuthGuard>} />
-      <Route path="/me" element={<AuthGuard><ProfilePage /></AuthGuard>} />
-      <Route path="/me/update" element={<AuthGuard><ProfileUpdatePage /></AuthGuard>} />
-      <Route path="/balance" element={<AuthGuard><BalanceStatsPage /></AuthGuard>} />
-      <Route path="/staking" element={<AuthGuard><StakingPage /></AuthGuard>} />
-      <Route path="/my-staking" element={<AuthGuard><MyStakingPage /></AuthGuard>} />
-      <Route path="/admin/staking" element={<AuthGuard><AdminStakingPage /></AuthGuard>} />
-      <Route path="/admin/withdrawals" element={<AuthGuard><AdminWithdrawalsPage /></AuthGuard>} />
-      <Route path="/wallet" element={<AuthGuard><WalletOverviewPage /></AuthGuard>} />
-      <Route path="/wallet/deposit/:symbol" element={<AuthGuard><CoinDepositPage /></AuthGuard>} />
+      <Route path="/trade"         element={<Navigate to="/trade/SOL-INR" replace />} />
+      <Route path="/markets"       element={<AuthGuard><MarketsPage /></AuthGuard>} />
+      <Route path="/leaderboard"   element={<AuthGuard><LeaderboardPage /></AuthGuard>} />
+      <Route path="/me"            element={<AuthGuard><ProfilePage /></AuthGuard>} />
+      <Route path="/me/update"     element={<AuthGuard><ProfileUpdatePage /></AuthGuard>} />
+      <Route path="/balance"       element={<AuthGuard><BalanceStatsPage /></AuthGuard>} />
+      <Route path="/staking"       element={<AuthGuard><StakingPage /></AuthGuard>} />
+      <Route path="/my-staking"    element={<AuthGuard><MyStakingPage /></AuthGuard>} />
+      <Route path="/admin/staking"      element={<AuthGuard><AdminStakingPage /></AuthGuard>} />
+      <Route path="/admin/withdrawals"  element={<AuthGuard><AdminWithdrawalsPage /></AuthGuard>} />
+
+      {/* ── Wallet ───────────────────────────────────────────────────── */}
+      {/* /wallet  →  redirect to /wallet/spot (backwards-compatible) */}
+      <Route path="/wallet" element={<Navigate to="/wallet/spot" replace />} />
+
+      {/* Three independent wallet pages */}
+      <Route path="/wallet/spot"  element={<AuthGuard><SpotWalletPage /></AuthGuard>} />
+      <Route path="/wallet/fund"  element={<AuthGuard><FundWalletPage /></AuthGuard>} />
+      <Route path="/wallet/share" element={<AuthGuard><ShareWalletPage /></AuthGuard>} />
+
+      {/* Sub-pages (deposit / withdraw / history) remain unchanged */}
+      <Route path="/wallet/deposit/:symbol"  element={<AuthGuard><CoinDepositPage /></AuthGuard>} />
       <Route path="/wallet/withdraw/:symbol" element={<AuthGuard><CoinWithdrawPage /></AuthGuard>} />
-      <Route path="/wallet/history" element={<AuthGuard><WalletHistoryPage /></AuthGuard>} />
+      <Route path="/wallet/history"          element={<AuthGuard><WalletHistoryPage /></AuthGuard>} />
+
+      {/* ── Fallback ─────────────────────────────────────────────────── */}
       <Route path="*" element={<Navigate to="/trade/SOL-INR" replace />} />
     </Routes>
   );
