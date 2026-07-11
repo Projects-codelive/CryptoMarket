@@ -75,7 +75,7 @@ exports.getOverview = async (req, res) => {
       if (added.has(b.currency_symbol)) return;
       added.add(b.currency_symbol);
       const bal = balMap[b.currency_symbol] || { spot: 0, funding: 0, share: 0 };
-      const price = priceMap[b.currency_symbol] || 0;
+      const price = b.currency_symbol === 'INR' ? 1 : (priceMap[b.currency_symbol] || 0);
       const inTrade = lockedMap[b.currency_symbol] || 0;
       const total = bal.spot + bal.funding + bal.share + inTrade;
       const usdValue = total * price;
@@ -133,7 +133,7 @@ exports.getCoinDetail = async (req, res) => {
     const [priceRows] = await conn.query(
       'SELECT last_price FROM dbt_coinhistory WHERE coin_symbol = ? ORDER BY id DESC LIMIT 1', [symbol]
     );
-    const price = priceRows.length ? parseFloat(priceRows[0].last_price) : 0;
+    const price = symbol === 'INR' ? 1 : (priceRows.length ? parseFloat(priceRows[0].last_price) : 0);
 
     const [openOrders] = await conn.query(
       "SELECT SUM(bid_qty_available) as locked FROM dbt_biding WHERE user_id = ? AND market_symbol LIKE ? AND status = 2",

@@ -370,7 +370,7 @@ exports.getHoldingsDetailed = asyncMiddleware(async (req, res) => {
     for (const p of prices) priceMap[p.coin_symbol] = parseFloat(p.last_price);
 
     const holdings = balances.map(b => {
-        const price    = priceMap[b.currency_symbol] || 0;
+        const price    = b.currency_symbol === 'INR' ? 1 : (priceMap[b.currency_symbol] || 0);
         const valueINR = parseFloat(b.balance) * price;
         return {
             currency_symbol : b.currency_symbol,
