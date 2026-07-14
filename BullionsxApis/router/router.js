@@ -284,11 +284,26 @@ router.get('/api/v1/dev/credit/:user_id/:currency/:amount', async (req, res) => 
       return res.status(400).json({ message: 'user_id, currency, amount required' });
     }
     const conn = await connect();
-    await conn.query(
-      'INSERT INTO dbt_balance (user_id, currency_symbol, balance, sharewallet, fundwallet) VALUES (?, ?, ?, 0, 0) ON DUPLICATE KEY UPDATE balance = balance + ?',
-      [user_id, currency, parseFloat(amount), parseFloat(amount)]
+    const [existing] = await conn.query(
+      'SELECT id FROM dbt_balance WHERE user_id = ? AND currency_symbol = ? LIMIT 1',
+      [user_id, currency]
     );
-    res.json({ message: `Credited ${amount} ${currency} to ${user_id}` });
+    if (existing.length) {
+      await conn.query(
+        'UPDATE dbt_balance SET balance = balance + ? WHERE id = ?',
+        [parseFloat(amount), existing[0].id]
+      );
+    } else {
+      await conn.query(
+        'INSERT INTO dbt_balance (user_id, currency_symbol, balance, sharewallet, fundwallet) VALUES (?, ?, ?, 0, 0)',
+        [user_id, currency, parseFloat(amount)]
+      );
+    }
+    const [[{ total }]] = await conn.query(
+      'SELECT SUM(balance) as total FROM dbt_balance WHERE user_id = ? AND currency_symbol = ?',
+      [user_id, currency]
+    );
+    res.json({ message: `Credited ${amount} ${currency} to ${user_id}`, balance: parseFloat(total) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

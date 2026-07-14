@@ -17,7 +17,7 @@ exports.getOverview = async (req, res) => {
     } catch (_) {
       [coins] = await conn.query('SELECT * FROM dbt_cryptocoin');
     }
-    const [balances] = await conn.query('SELECT * FROM dbt_balance WHERE user_id = ?', [userId]);
+    const [balances] = await conn.query('SELECT currency_symbol, SUM(balance) as balance, SUM(sharewallet) as sharewallet, SUM(fundwallet) as fundwallet FROM dbt_balance WHERE user_id = ? GROUP BY currency_symbol', [userId]);
     const [prices] = await conn.query(
       'SELECT ch.coin_symbol, ch.last_price FROM dbt_coinhistory ch INNER JOIN (SELECT coin_symbol, MAX(id) as maxid FROM dbt_coinhistory GROUP BY coin_symbol) latest ON ch.id = latest.maxid'
     );

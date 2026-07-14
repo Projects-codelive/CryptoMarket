@@ -391,7 +391,7 @@ exports.getUserBalance = asyncMiddleware(async (req, res) => {
 
     const conn = await connect();
     const [rows] = await conn.query(
-        'SELECT currency_symbol, balance FROM dbt_balance WHERE user_id = ? AND currency_symbol = ?',
+        'SELECT currency_symbol, SUM(balance) as balance, SUM(sharewallet) as sharewallet, SUM(fundwallet) as fundwallet FROM dbt_balance WHERE user_id = ? AND currency_symbol = ? GROUP BY currency_symbol',
         [user_id, currency_symbol]
     );
 
