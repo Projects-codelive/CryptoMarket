@@ -215,10 +215,15 @@ router
      
 
 const { getBalanceStats } = require('../controller/balanceStats');
+const { getTradeHistory } = require('../controller/tradeHistory');
 
 router
     .route('/balance-stats')
     .get(auth, getBalanceStats);
+
+router
+    .route('/api/v1/trade-history')
+    .get(auth, getTradeHistory);
 
 router.use('/api/v1/staking', stakingRouter);
 

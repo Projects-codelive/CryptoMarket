@@ -1,17 +1,16 @@
-// components/wallet/WalletNav.jsx
-// Tab bar rendered at the top of every wallet page so users can switch wallets.
-
 import { NavLink } from 'react-router-dom';
 
 const WALLET_TABS = [
-  { label: 'Spot Wallet',  to: '/wallet/spot'  },
-  { label: 'Fund Wallet',  to: '/wallet/fund'  },
-  { label: 'Share Wallet', to: '/wallet/share' },
+  { label: 'Spot Wallet',    to: '/wallet/spot'          },
+  { label: 'Fund Wallet',    to: '/wallet/fund'          },
+  { label: 'Share Wallet',   to: '/wallet/share'         },
+  { label: 'Trade History',  to: '/wallet/trade-history' },
+  { label: 'Balance Log',    to: '/wallet/balance-log'   },
 ];
 
 export default function WalletNav() {
   return (
-    <div className="flex items-center gap-1 mb-6 overflow-x-auto">
+    <div className="flex items-center gap-1 mb-6 flex-wrap">
       {WALLET_TABS.map((tab) => (
         <NavLink
           key={tab.to}

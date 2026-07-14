@@ -285,6 +285,14 @@ async function matchAndSettle(conn, newOrder, buyFeesPct, sellFeesPct, quoteSymb
       currencySymbol: coinSymbol,
       transactionType: 'TRADE_BUY',
       amount: matchQty,
+      fees: 0,
+      ip
+    });
+    await logBalanceChange(conn, {
+      userId: buyerOrder.user_id,
+      currencySymbol: quoteSymbol,
+      transactionType: 'TRADE_BUY',
+      amount: 0,
       fees: buyerFee,
       ip
     });
