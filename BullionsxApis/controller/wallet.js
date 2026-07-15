@@ -77,9 +77,9 @@ exports.getOverview = async (req, res) => {
     const balMap = {};
     balances.forEach(b => {
       balMap[b.currency_symbol] = {
-        spot: parseFloat(b.balance || 0),
-        funding: parseFloat(b.fundwallet || 0),
-        share: parseFloat(b.sharewallet || 0),
+        spot: Math.max(0, parseFloat(b.balance || 0)),
+        funding: Math.max(0, parseFloat(b.fundwallet || 0)),
+        share: Math.max(0, parseFloat(b.sharewallet || 0)),
       };
     });
 
@@ -232,15 +232,19 @@ exports.getCoinDetail = async (req, res) => {
     );
     const inTrade = parseFloat(openOrders[0].locked || 0);
 
+    const spotBal = Math.max(0, parseFloat(bal.balance || 0));
+    const fundingBal = Math.max(0, parseFloat(bal.fundwallet || 0));
+    const shareBal = Math.max(0, parseFloat(bal.sharewallet || 0));
+
     res.json({
       status: 1,
       coin: symbol,
       name: coinName,
-      spot: parseFloat(bal.balance),
-      funding: parseFloat(bal.fundwallet),
-      share: parseFloat(bal.sharewallet),
+      spot: spotBal,
+      funding: fundingBal,
+      share: shareBal,
       inTrade,
-      total: parseFloat(bal.balance) + parseFloat(bal.fundwallet) + parseFloat(bal.sharewallet) + inTrade,
+      total: spotBal + fundingBal + shareBal + inTrade,
       price,
       networks,
     });
