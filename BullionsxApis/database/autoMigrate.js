@@ -168,6 +168,12 @@ async function ensureStakingSchema() {
             console.log('[autoMigrate] Removed legacy dbt_staking_plans and dbt_user_staking tables');
         } catch (_) {}
 
+        // Disable INR coin and all INR-based trading pairs — market is USDT only
+        try {
+            await conn.query("UPDATE dbt_cryptocoin SET status = 0 WHERE symbol = 'INR'");
+            await conn.query("UPDATE dbt_coinpair SET status = 0 WHERE market_currency = 'INR' OR coin_currency = 'INR'");
+            console.log('[autoMigrate] Disabled INR coin and INR-based coin pairs (USDT-only market)');
+        } catch (_) {}
 
         const withdrawCols = [
             ['charge', 'decimal(20,8) DEFAULT 0.00000000'],
