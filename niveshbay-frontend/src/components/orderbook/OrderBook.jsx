@@ -1,10 +1,12 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useOrderBook } from '../../hooks/useOrderBook';
-import { formatINR, formatAmount } from '../../utils/formatCurrency';
+import { formatINR, formatAmount, formatCurrency } from '../../utils/formatCurrency';
 import { useSocket } from '../../context/SocketContext';
+import { useMarketData } from '../../hooks/useMarketData';
 import api from '../../api/axiosInstance';
 
 export default function OrderBook({ symbol, onSellFormFill, onBuyFormFill }) {
+  const { activeCoin } = useMarketData(symbol);
   const { bids, asks, lastTradePrice: hookLastTrade } = useOrderBook(symbol);
   const { orderBookUpdates, tradeUpdates } = useSocket() || {};
   const [rounding, setRounding] = useState('0.01');
@@ -18,8 +20,9 @@ export default function OrderBook({ symbol, onSellFormFill, onBuyFormFill }) {
   const [prevTradePrice, setPrevTradePrice] = useState(0);
   const [tradeDirection, setTradeDirection] = useState('neutral');
 
-  const base = symbol?.split('-')[0] || 'SOL';
-  const dbSymbol = symbol ? symbol.replace('-', '_') : 'SOL_INR';
+  const base = activeCoin?.currency_symbol || symbol?.split(/[-_/]/)[0] || 'SOL';
+  const quoteSymbol = activeCoin?.quote_symbol || symbol?.split(/[-_/]/)[1] || 'INR';
+  const dbSymbol = activeCoin?.symbol_db || (symbol ? symbol.replace('-', '_') : 'SOL_INR');
 
   useEffect(() => {
     if (hookLastTrade && hookLastTrade > 0 && lastTradePrice === 0) {
@@ -198,7 +201,7 @@ export default function OrderBook({ symbol, onSellFormFill, onBuyFormFill }) {
       </div>
 
       <div className="flex text-[10px] text-[#848e9c] px-3 py-1.5 border-b border-[#1e2433] font-semibold bg-[#0d111b]">
-        <span className="flex-1">Price(INR)</span>
+        <span className="flex-1">Price({quoteSymbol})</span>
         <span className="w-20 text-right">Amount({base})</span>
         <span className="w-20 text-right">Total</span>
       </div>
@@ -222,9 +225,9 @@ export default function OrderBook({ symbol, onSellFormFill, onBuyFormFill }) {
               onMouseLeave={handleMouseLeave}
               onClick={() => handleRowClick(ask, 'SELL')}
             >
-              <span className="flex-1 text-[#f6465d] font-semibold">{formatINR(ask.price)}</span>
+              <span className="flex-1 text-[#f6465d] font-semibold">{formatCurrency(ask.price, quoteSymbol)}</span>
               <span className="w-20 text-right text-white font-medium">{formatAmount(ask.amount)}</span>
-              <span className="w-20 text-right text-[#848e9c]">{formatINR(ask.total)}</span>
+              <span className="w-20 text-right text-[#848e9c]">{formatCurrency(ask.total, quoteSymbol)}</span>
             </div>
           );
         })}
@@ -235,10 +238,10 @@ export default function OrderBook({ symbol, onSellFormFill, onBuyFormFill }) {
           {arrowIcon}
           {tradeChangePercent !== 0
             ? `${tradeDirection === 'up' ? '+' : ''}${tradeChangePercent.toFixed(2)}%`
-            : lastTradePrice > 0 ? formatINR(lastTradePrice) : '--'}
+            : lastTradePrice > 0 ? formatCurrency(lastTradePrice, quoteSymbol) : '--'}
         </span>
         {lastTradePrice > 0 && (
-          <span className="text-[10px] text-[#848e9c]">{formatINR(lastTradePrice)}</span>
+          <span className="text-[10px] text-[#848e9c]">{formatCurrency(lastTradePrice, quoteSymbol)}</span>
         )}
       </div>
 
@@ -261,9 +264,9 @@ export default function OrderBook({ symbol, onSellFormFill, onBuyFormFill }) {
               onMouseLeave={handleMouseLeave}
               onClick={() => handleRowClick(bid, 'BUY')}
             >
-              <span className="flex-1 text-[#0ecb81] font-semibold">{formatINR(bid.price)}</span>
+              <span className="flex-1 text-[#0ecb81] font-semibold">{formatCurrency(bid.price, quoteSymbol)}</span>
               <span className="w-20 text-right text-white font-medium">{formatAmount(bid.amount)}</span>
-              <span className="w-20 text-right text-[#848e9c]">{formatINR(bid.total)}</span>
+              <span className="w-20 text-right text-[#848e9c]">{formatCurrency(bid.total, quoteSymbol)}</span>
             </div>
           );
         })}
@@ -274,15 +277,15 @@ export default function OrderBook({ symbol, onSellFormFill, onBuyFormFill }) {
           <div className="text-[#848e9c] text-[10px] mb-1 font-semibold">Cumulative Stats</div>
           <div className="flex justify-between text-white mb-0.5">
             <span className="text-[#848e9c]">Avg Price:</span>
-            <span className="font-bold text-right">{formatINR(tooltip.avg_price)}</span>
+            <span className="font-bold text-right">{formatCurrency(tooltip.avg_price, quoteSymbol)}</span>
           </div>
           <div className="flex justify-between text-white mb-0.5">
             <span className="text-[#848e9c]">Sum {base}:</span>
             <span className="font-bold text-right">{formatAmount(tooltip.sum_coin)}</span>
           </div>
           <div className="flex justify-between text-white">
-            <span className="text-[#848e9c]">Sum INR:</span>
-            <span className="font-bold text-right">{formatINR(tooltip.sum_inr)}</span>
+            <span className="text-[#848e9c]">Sum {quoteSymbol}:</span>
+            <span className="font-bold text-right">{formatCurrency(tooltip.sum_inr, quoteSymbol)}</span>
           </div>
         </div>
       )}

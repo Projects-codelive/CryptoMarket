@@ -9,8 +9,9 @@ export default function WalletSummaryCard({ label = 'Estimated Total Value', val
         <div>
           <span className="text-[#848e9c] text-xs uppercase tracking-wider">{label}</span>
           <div className="text-2xl font-bold mt-1">
-            <span className="text-[#848e9c] text-sm mr-1">INR</span>
-            {value.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            <span className="text-white font-bold mr-1">$</span>
+            {value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            <span className="text-[#848e9c] text-xs ml-1.5">USDT</span>
           </div>
         </div>
         {showActions && (

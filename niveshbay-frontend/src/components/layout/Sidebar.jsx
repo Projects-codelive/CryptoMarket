@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useMarketData } from '../../hooks/useMarketData';
 import { useSocket } from '../../context/SocketContext';
 import { useAuth } from '../../context/AuthContext';
-import { formatINR, formatAmount } from '../../utils/formatCurrency';
+import { formatINR, formatAmount, formatCurrency } from '../../utils/formatCurrency';
 import api from '../../api/axiosInstance';
 
 export default function Sidebar({ symbol: propSymbol }) {
@@ -21,8 +21,9 @@ export default function Sidebar({ symbol: propSymbol }) {
   const [marketTrades, setMarketTrades] = useState([]);
   const [moverTab, setMoverTab] = useState('all');
 
-  const base = activeSymbol?.split('-')[0] || 'SOL';
-  const dbSymbol = activeSymbol.replace('-', '_');
+  const base = activeCoin?.currency_symbol || activeSymbol?.split(/[-_/]/)[0] || 'SOL';
+  const quote = activeCoin?.quote_symbol || activeSymbol?.split(/[-_/]/)[1] || 'INR';
+  const dbSymbol = activeCoin?.symbol_db || activeSymbol.replace('-', '_');
 
   // Normalize active symbol comparison
   const normalizedActiveSymbol = activeSymbol.replace(/[_/]/g, '-');
@@ -185,7 +186,8 @@ export default function Sidebar({ symbol: propSymbol }) {
           const isSelected = normalizedActiveSymbol === coinSymbol;
           const change = parseFloat(coin.change_24h || 0);
           const isPositive = change >= 0;
-          const priceINR = coin.price * 83;
+          const [coinBase, coinQuote] = coinSymbol.split('-');
+          const coinPrice = coin.price;
 
           return (
             <div
@@ -197,13 +199,13 @@ export default function Sidebar({ symbol: propSymbol }) {
             >
               <div className="flex flex-col flex-1 leading-none">
                 <div className="flex items-center gap-1">
-                  <span className="text-white font-bold">{coinSymbol.split('-')[0]}</span>
-                  <span className="text-[#848e9c] text-[10px]">/{coinSymbol.split('-')[1]}</span>
+                  <span className="text-white font-bold">{coinBase}</span>
+                  <span className="text-[#848e9c] text-[10px]">/{coinQuote}</span>
                 </div>
                 <span className="text-[#848e9c] text-[9px] mt-0.5 capitalize">{coin.name}</span>
               </div>
               <div className="w-28 text-right leading-none">
-                <p className="text-white font-bold">{formatINR(priceINR)}</p>
+                <p className="text-white font-bold">{formatCurrency(coinPrice, coinQuote)}</p>
                 <p className={`text-[10px] font-semibold mt-1 ${isPositive ? 'text-[#0ecb81]' : 'text-[#f6465d]'}`}>
                   {isPositive ? '+' : ''}{change.toFixed(2)}%
                 </p>
@@ -236,7 +238,7 @@ export default function Sidebar({ symbol: propSymbol }) {
       </div>
 
       <div className="flex text-[9px] text-[#848e9c] px-3 py-1.5 border-b border-[#1e2433] font-semibold bg-[#0d111b]">
-        <span className="flex-1">Price(INR)</span>
+        <span className="flex-1">Price({quote})</span>
         <span className="w-20 text-right">Amount({base})</span>
         <span className="w-20 text-right">Time</span>
       </div>
@@ -250,7 +252,7 @@ export default function Sidebar({ symbol: propSymbol }) {
             marketTrades.map((t, i) => (
               <div key={`m-trade-${i}`} className="flex text-[10px] px-3 py-1 hover:bg-[#1e2433]/30">
                 <span className={`flex-1 font-semibold ${t.side === 'buy' ? 'text-[#0ecb81]' : 'text-[#f6465d]'}`}>
-                  {formatINR(t.price)}
+                  {formatCurrency(t.price, quote)}
                 </span>
                 <span className="w-20 text-right text-white font-medium">{formatAmount(t.amount)}</span>
                 <span className="w-20 text-right text-[#848e9c] font-medium">{t.time}</span>
@@ -263,7 +265,7 @@ export default function Sidebar({ symbol: propSymbol }) {
           myTrades.map((t, i) => (
             <div key={`my-trade-${i}`} className="flex text-[10px] px-3 py-1 hover:bg-[#1e2433]/30">
               <span className={`flex-1 font-semibold ${t.bid_type === 'BUY' ? 'text-[#0ecb81]' : 'text-[#f6465d]'}`}>
-                {formatINR(t.bid_price)}
+                {formatCurrency(t.bid_price, quote)}
               </span>
               <span className="w-20 text-right text-white font-medium">{formatAmount(t.bid_qty)}</span>
               <span className="w-20 text-right text-[#848e9c] font-medium">
@@ -299,7 +301,8 @@ export default function Sidebar({ symbol: propSymbol }) {
         <div className="space-y-2">
           {topMovers.map(coin => {
             const isPositive = coin.change >= 0;
-            const priceINR = coin.priceINR;
+            const priceVal = coin.priceINR;
+            const [coinBase, coinQuote] = coin.symbol.split('/');
             return (
               <div
                 key={coin.symbol}
@@ -308,10 +311,10 @@ export default function Sidebar({ symbol: propSymbol }) {
               >
                 <div className="flex flex-col leading-none">
                   <div className="flex items-center gap-0.5">
-                    <span className="text-white font-bold text-xs">{coin.symbol.split('/')[0]}</span>
-                    <span className="text-[#848e9c] text-[9px]">/INR</span>
+                    <span className="text-white font-bold text-xs">{coinBase}</span>
+                    <span className="text-[#848e9c] text-[9px]">/{coinQuote}</span>
                   </div>
-                  <span className="text-[9px] text-[#848e9c] mt-0.5">{formatINR(coin.priceINR)}</span>
+                  <span className="text-[9px] text-[#848e9c] mt-0.5">{formatCurrency(priceVal, coinQuote)}</span>
                 </div>
                 
                 {/* Custom Pill Badge (Green for positive, red for negative) */}

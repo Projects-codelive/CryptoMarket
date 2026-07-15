@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getLeaderboard } from '../api/leaderboard';
-import { formatINR } from '../utils/formatCurrency';
+import { formatCurrency } from '../utils/formatCurrency';
 
 export default function LeaderboardPage() {
   const navigate = useNavigate();
@@ -45,7 +45,7 @@ export default function LeaderboardPage() {
               <div key={entry.user_id || i} className="grid grid-cols-4 text-sm px-4 py-3 hover:bg-[#1e2329] border-b border-[#2b2f36] last:border-0">
                 <span className="w-8 text-[#848e9c]">{i + 1}</span>
                 <span className="text-white font-medium">{entry.name}</span>
-                <span className={`text-right font-bold ${entry.balance >= 0 ? 'text-[#0ecb81]' : 'text-[#f6465d]'}`}>{formatINR(entry.balance)}</span>
+                <span className={`text-right font-bold ${entry.balance >= 0 ? 'text-[#0ecb81]' : 'text-[#f6465d]'}`}>{formatCurrency(entry.balance, 'USDT')}</span>
                 <span className="text-right text-[#848e9c]">{entry.user_id}</span>
               </div>
             ))

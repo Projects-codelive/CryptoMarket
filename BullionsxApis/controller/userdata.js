@@ -21,6 +21,13 @@ exports.coinhistory = asyncMiddleware(async (req, res) => {
         const conn = await connect();
         const marketSymbol = req.query.market_symbol;
         if (marketSymbol) {
+                const [[pair]] = await conn.query(
+                        'SELECT status FROM dbt_coinpair WHERE (symbol = ? OR market_symbol = ?) AND status = 1',
+                        [marketSymbol, marketSymbol]
+                );
+                if (!pair) {
+                        return res.status(403).json({ message: 'Trading pair is inactive or not found.' });
+                }
                 const data = await conn.query('SELECT * FROM dbt_coinhistory WHERE market_symbol = ? ORDER BY id DESC LIMIT 200', [marketSymbol]);
                 return res.status(200).send(data[0]);
         }
@@ -103,8 +110,11 @@ exports.getMe = asyncMiddleware(async (req, res) => {
 
 exports.getBalance = asyncMiddleware(async (req, res) => {
         const conn = await connect();
-        const data = await conn.query("SELECT * FROM dbt_balance WHERE user_id = ? AND currency_symbol = 'INR'", [req.query.user_id]);
-        res.status(200).json(data[0][0] || { user_id: req.query.user_id, currency_symbol: 'INR', balance: 0 });
+        const [rows] = await conn.query(
+            "SELECT currency_symbol, SUM(balance) as balance, SUM(sharewallet) as sharewallet, SUM(fundwallet) as fundwallet FROM dbt_balance WHERE user_id = ? AND currency_symbol = 'USDT' GROUP BY currency_symbol",
+            [req.query.user_id]
+        );
+        res.status(200).json(rows[0] || { user_id: req.query.user_id, currency_symbol: 'USDT', balance: 0 });
 });
 
 exports.getHoldings = asyncMiddleware(async (req, res) => {
@@ -121,7 +131,7 @@ exports.getLeaderboard = asyncMiddleware(async (req, res) => {
         const data = await conn.query(`
             select u.user_id, u.first_name, u.last_name, coalesce(b.balance, 0) as balance
             from dbt_user u
-            left join dbt_balance b on u.user_id = b.user_id and b.currency_symbol = 'INR'
+            left join dbt_balance b on u.user_id = b.user_id and b.currency_symbol = 'USDT'
             order by b.balance desc
             limit 50
         `);
@@ -137,67 +147,123 @@ exports.getPortfolio = asyncMiddleware(async (req, res) => {
         }
 
         const [balanceRows] = await conn.query(
-            'SELECT id, user_id, currency_symbol, balance FROM dbt_balance WHERE user_id = ?',
+            'SELECT currency_symbol, SUM(balance) as balance FROM dbt_balance WHERE user_id = ? GROUP BY currency_symbol',
             [userId]
         );
 
+        const priceMap = {};
+        // Get initial prices from dbt_coinpair
+        const [pairRows] = await conn.query('SELECT symbol, initial_price FROM dbt_coinpair WHERE status = 1');
+        for (const row of pairRows) {
+            priceMap[row.symbol] = parseFloat(row.initial_price || 0);
+        }
+        // Overwrite with latest prices
         const [priceRows] = await conn.query(`
-            SELECT ch.coin_symbol, ch.last_price
+            SELECT ch.market_symbol, ch.last_price
             FROM dbt_coinhistory ch
             INNER JOIN (
-                SELECT coin_symbol, MAX(id) AS max_id
+                SELECT market_symbol, MAX(id) AS max_id
                 FROM dbt_coinhistory
-                GROUP BY coin_symbol
+                GROUP BY market_symbol
             ) latest ON ch.id = latest.max_id
         `);
-
-        const priceMap = {};
         for (const row of priceRows) {
-            priceMap[row.coin_symbol] = parseFloat(row.last_price);
+            priceMap[row.market_symbol] = parseFloat(row.last_price || 0);
         }
 
-        let totalValueInr = 0;
+        let usdtInrRate = 83.0;
+        if (priceMap['USDT_INR'] && priceMap['USDT_INR'] > 0) {
+            usdtInrRate = priceMap['USDT_INR'];
+        } else if (priceMap['INR_USDT'] && priceMap['INR_USDT'] > 0) {
+            usdtInrRate = 1.0 / priceMap['INR_USDT'];
+        }
+
+        const DEFAULT_COINS = [
+          { market_symbol: 'BTC-INR', price: 5380218.77 },
+          { market_symbol: 'ETH-INR', price: 295872.35 },
+          { market_symbol: 'SOL-INR', price: 5741.94 },
+          { market_symbol: 'XRP-INR', price: 48.47 },
+          { market_symbol: 'DOGE-INR', price: 12.04 },
+          { market_symbol: 'ADA-INR', price: 40.26 },
+          { market_symbol: 'BNB-INR', price: 26823.50 },
+        ];
+
+        let totalValueUsdt = 0;
         const holdings = [];
 
         for (const bal of balanceRows) {
             const symbol = bal.currency_symbol;
             const balance = parseFloat(bal.balance);
+            if (balance <= 0) continue;
 
-            let price = 0;
-            if (symbol === 'INR') {
-                price = 1.0;
-            } else if (priceMap[symbol]) {
-                price = priceMap[symbol];
+            let valueUsdt = 0;
+            let currentPriceUsdt = 0;
+
+            if (symbol === 'USDT') {
+                valueUsdt = balance;
+                currentPriceUsdt = 1.0;
+            } else if (symbol === 'INR') {
+                valueUsdt = balance / usdtInrRate;
+                currentPriceUsdt = 1.0 / usdtInrRate;
+            } else {
+                const usdtPair = `${symbol}_USDT`;
+                const inrPair = `${symbol}_INR`;
+                if (priceMap[usdtPair] !== undefined) {
+                    currentPriceUsdt = priceMap[usdtPair];
+                    valueUsdt = balance * currentPriceUsdt;
+                } else if (priceMap[inrPair] !== undefined) {
+                    const priceInr = priceMap[inrPair];
+                    currentPriceUsdt = priceInr / usdtInrRate;
+                    valueUsdt = balance * currentPriceUsdt;
+                } else {
+                    const counterpart = DEFAULT_COINS.find(c => c.market_symbol === `${symbol}-INR`);
+                    if (counterpart) {
+                        currentPriceUsdt = counterpart.price / usdtInrRate;
+                        valueUsdt = balance * currentPriceUsdt;
+                    }
+                }
             }
 
-            const valueInr = balance * price;
-            totalValueInr += valueInr;
+            totalValueUsdt += valueUsdt;
 
             holdings.push({
                 currency_symbol: symbol,
                 balance: balance,
-                price: price,
-                value_inr: valueInr
+                price: parseFloat(currentPriceUsdt.toFixed(8)),
+                value_inr: parseFloat(valueUsdt.toFixed(2)), // keep naming but in USDT
+                value_usdt: parseFloat(valueUsdt.toFixed(4))
             });
         }
 
         const [feeRows] = await conn.query(
-            "SELECT COALESCE(SUM(transaction_fees), 0) AS total_fees FROM dbt_balance_log WHERE user_id = ? AND transaction_type IN ('TRADE_BUY', 'TRADE_SELL')",
+            `SELECT currency_symbol, SUM(transaction_fees) AS fees
+             FROM dbt_balance_log
+             WHERE user_id = ? AND transaction_type IN ('TRADE_BUY', 'TRADE_SELL')
+             GROUP BY currency_symbol`,
             [userId]
         );
-        const totalFeesPaid = parseFloat(feeRows[0]?.total_fees || 0);
+        let totalFeesPaidUsdt = 0;
+        for (const row of feeRows) {
+            const fees = parseFloat(row.fees || 0);
+            if (row.currency_symbol.toUpperCase() === 'USDT') {
+                totalFeesPaidUsdt += fees;
+            } else {
+                totalFeesPaidUsdt += fees / usdtInrRate;
+            }
+        }
 
-        const starterBalance = 200000;
-        const unrealisedPnl = totalValueInr - starterBalance;
-        const pnlPercent = starterBalance > 0 ? (unrealisedPnl / starterBalance * 100).toFixed(2) : '0.00';
+        const starterBalanceUsdt = 200000 / usdtInrRate;
+        const unrealisedPnlUsdt = totalValueUsdt - starterBalanceUsdt;
+        const pnlPercent = starterBalanceUsdt > 0 ? (unrealisedPnlUsdt / starterBalanceUsdt * 100).toFixed(2) : '0.00';
 
         res.json({
             user_id: userId,
-            total_value_inr: totalValueInr,
-            starter_balance: starterBalance,
-            unrealised_pnl: unrealisedPnl,
+            total_value_inr: parseFloat(totalValueUsdt.toFixed(2)), // in USDT
+            total_value_usdt: parseFloat(totalValueUsdt.toFixed(4)),
+            starter_balance: parseFloat(starterBalanceUsdt.toFixed(2)),
+            unrealised_pnl: parseFloat(unrealisedPnlUsdt.toFixed(2)),
             pnl_percent: pnlPercent,
-            total_fees_paid: totalFeesPaid,
+            total_fees_paid: parseFloat(totalFeesPaidUsdt.toFixed(2)),
             holdings
         });
 });
@@ -350,8 +416,10 @@ exports.getHoldingsDetailed = asyncMiddleware(async (req, res) => {
     const conn = await connect();
 
     const [balances] = await conn.query(
-        `SELECT currency_symbol, balance FROM dbt_balance
-         WHERE user_id = ? AND currency_symbol != 'INR' AND balance > 0`,
+        `SELECT currency_symbol, SUM(balance) as balance FROM dbt_balance
+         WHERE user_id = ? AND currency_symbol != 'INR'
+         GROUP BY currency_symbol
+         HAVING SUM(balance) > 0`,
         [user_id]
     );
 
@@ -410,6 +478,14 @@ exports.getLatestPrice = asyncMiddleware(async (req, res) => {
 
     const conn = await connect();
 
+    const [[pair]] = await conn.query(
+        'SELECT status FROM dbt_coinpair WHERE (symbol = ? OR market_symbol = ?) AND status = 1',
+        [market_symbol, market_symbol]
+    );
+    if (!pair) {
+        return res.status(403).json({ message: 'Trading pair is inactive or not found.' });
+    }
+
     const [[row]] = await conn.query(
         `SELECT last_price, price_high_24h, price_low_24h,
                 price_change_24h, volume_24h, date
@@ -420,6 +496,22 @@ exports.getLatestPrice = asyncMiddleware(async (req, res) => {
     );
 
     if (!row) {
+        const [[pairRow]] = await conn.query(
+            `SELECT initial_price FROM dbt_coinpair WHERE (symbol = ? OR market_symbol = ?) AND status = 1`,
+            [market_symbol, market_symbol]
+        );
+        if (pairRow) {
+            const fallbackPrice = parseFloat(pairRow.initial_price || 0);
+            return res.status(200).json({
+                price: fallbackPrice,
+                change_24h: 0,
+                change_percent_24h: 0,
+                high_24h: fallbackPrice,
+                low_24h: fallbackPrice,
+                volume_24h: 0,
+                date: new Date(),
+            });
+        }
         return res.status(404).json({ message: 'No price data found for this market.' });
     }
 
@@ -471,6 +563,15 @@ exports.getCandleHistory = asyncMiddleware(async (req, res) => {
     }
 
     const conn = await connect();
+
+    const [[pair]] = await conn.query(
+        'SELECT status FROM dbt_coinpair WHERE (symbol = ? OR market_symbol = ?) AND status = 1',
+        [market_symbol, market_symbol]
+    );
+    if (!pair) {
+        return res.status(403).json({ message: 'Trading pair is inactive or not found.' });
+    }
+
     let rows;
 
     if (interval === '1m') {

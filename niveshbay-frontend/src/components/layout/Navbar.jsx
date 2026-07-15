@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { formatINR } from '../../utils/formatCurrency';
+import { formatCurrency } from '../../utils/formatCurrency';
 
 export default function Navbar({ balance, portfolioValue, realizedPnl }) {
   const { user, logout } = useAuth();
@@ -49,16 +49,16 @@ export default function Navbar({ balance, portfolioValue, realizedPnl }) {
         <div className="flex items-center gap-4 text-xs">
           <div className="text-right">
             <span className="text-[#848e9c] text-[10px] block uppercase tracking-wider">Balance</span>
-            <p className="text-white font-bold text-sm tracking-wide">{formatINR(balance)}</p>
+            <p className="text-white font-bold text-sm tracking-wide">{formatCurrency(balance, 'USDT')}</p>
           </div>
           <div className="text-right border-l border-[#1e2433] pl-4">
             <span className="text-[#848e9c] text-[10px] block uppercase tracking-wider">Portfolio</span>
-            <p className="text-[#0ecb81] font-bold text-sm tracking-wide">{formatINR(portfolioValue)}</p>
+            <p className="text-[#0ecb81] font-bold text-sm tracking-wide">{formatCurrency(portfolioValue, 'USDT')}</p>
           </div>
           <div className="text-right border-l border-[#1e2433] pl-4">
             <span className="text-[#848e9c] text-[10px] block uppercase tracking-wider">Realized P&L</span>
             <p className={`font-bold text-sm tracking-wide ${realizedPnl >= 0 ? 'text-[#0ecb81]' : 'text-[#f6465d]'}`}>
-              {realizedPnl >= 0 ? '+' : ''}{formatINR(realizedPnl)}
+              {realizedPnl >= 0 ? '+' : ''}{formatCurrency(realizedPnl, 'USDT')}
             </p>
           </div>
         </div>

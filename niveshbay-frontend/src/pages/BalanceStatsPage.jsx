@@ -2,7 +2,13 @@ import { useEffect, useRef, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBalanceStats } from '../hooks/useBalanceStats';
 import { createChart, AreaSeries } from 'lightweight-charts';
-import { formatINR, formatINRShort } from '../utils/formatCurrency';
+import { formatINR, formatINRShort, formatCurrency } from '../utils/formatCurrency';
+
+function formatUSDTShort(amount) {
+  if (amount >= 1000000) return '$' + (amount / 1000000).toFixed(2) + 'M';
+  if (amount >= 1000) return '$' + (amount / 1000).toFixed(2) + 'K';
+  return '$' + Number(amount).toFixed(2);
+}
 
 function DonutChart({ data }) {
   const total = useMemo(() => data.reduce((s, d) => s + d.value, 0), [data]);
@@ -36,7 +42,7 @@ function DonutChart({ data }) {
           ))}
           <circle cx="0" cy="0" r={radius - 10} fill="#141822" />
         </g>
-        <text x="70" y="66" textAnchor="middle" fill="#eaecef" fontSize="12" fontWeight="bold">{formatINRShort(total)}</text>
+        <text x="70" y="66" textAnchor="middle" fill="#eaecef" fontSize="12" fontWeight="bold">{formatUSDTShort(total)}</text>
         <text x="70" y="80" textAnchor="middle" fill="#848e9c" fontSize="9">Total</text>
       </svg>
       <div className="space-y-1.5">
@@ -44,7 +50,7 @@ function DonutChart({ data }) {
           <div key={i} className="flex items-center gap-2 text-xs">
             <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: s.color }} />
             <span className="text-[#848e9c] w-12">{s.currency_symbol}</span>
-            <span className="text-white font-semibold w-20 text-right">{formatINRShort(s.value)}</span>
+            <span className="text-white font-semibold w-20 text-right">{formatUSDTShort(s.value)}</span>
             <span className="text-[#848e9c] w-10 text-right">{s.pct.toFixed(1)}%</span>
           </div>
         ))}
@@ -81,9 +87,9 @@ export default function BalanceStatsPage() {
 
   const donutData = useMemo(() => {
     if (!stats) return [];
-    const inrItem = { currency_symbol: 'INR', value: stats.inr_balance };
+    const usdtItem = { currency_symbol: 'USDT', value: stats.inr_balance };
     const coinItems = nonInrHoldings.map(h => ({ currency_symbol: h.currency_symbol, value: h.value_inr }));
-    return [inrItem, ...coinItems];
+    return [usdtItem, ...coinItems];
   }, [stats, nonInrHoldings]);
 
   useEffect(() => {
@@ -197,24 +203,24 @@ export default function BalanceStatsPage() {
         {/* Hero Summary Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="bg-[#141822] border border-[#1e2433] rounded-lg p-4">
-            <span className="text-[10px] text-[#848e9c] uppercase font-bold tracking-wider">INR Balance</span>
-            <p className="text-white font-bold text-lg mt-1">{formatINR(stats.inr_balance)}</p>
+            <span className="text-[10px] text-[#848e9c] uppercase font-bold tracking-wider">USDT Balance</span>
+            <p className="text-white font-bold text-lg mt-1">{formatCurrency(stats.inr_balance, 'USDT')}</p>
           </div>
           <div className="bg-[#141822] border border-[#1e2433] rounded-lg p-4">
             <span className="text-[10px] text-[#848e9c] uppercase font-bold tracking-wider">Portfolio Value</span>
-            <p className="text-white font-bold text-lg mt-1">{formatINR(stats.total_portfolio_value)}</p>
+            <p className="text-white font-bold text-lg mt-1">{formatCurrency(stats.total_portfolio_value, 'USDT')}</p>
           </div>
           <div className="bg-[#141822] border border-[#1e2433] rounded-lg p-4">
             <span className="text-[10px] text-[#848e9c] uppercase font-bold tracking-wider">Unrealized P&amp;L</span>
             <p className={`font-bold text-lg mt-1 ${pnlPositive ? 'text-[#0ecb81]' : 'text-[#f6465d]'}`}>
-              {pnlPositive ? '+' : ''}{formatINR(stats.unrealized_pnl)}
+              {pnlPositive ? '+' : ''}{formatCurrency(stats.unrealized_pnl, 'USDT')}
               <span className="text-xs ml-1">({pnlPositive ? '+' : ''}{stats.pnl_percent}%)</span>
             </p>
           </div>
           <div className="bg-[#141822] border border-[#1e2433] rounded-lg p-4">
             <span className="text-[10px] text-[#848e9c] uppercase font-bold tracking-wider">Realized P&amp;L</span>
             <p className={`font-bold text-lg mt-1 ${realizedPositive ? 'text-[#0ecb81]' : 'text-[#f6465d]'}`}>
-              {realizedPositive ? '+' : ''}{formatINR(stats.realized_pnl)}
+              {realizedPositive ? '+' : ''}{formatCurrency(stats.realized_pnl, 'USDT')}
             </p>
           </div>
         </div>
@@ -243,8 +249,8 @@ export default function BalanceStatsPage() {
                     <div key={h.currency_symbol} className="flex items-center justify-between text-xs py-1.5 border-b border-[#1e2433]/50 last:border-0">
                       <span className="text-white font-semibold w-16">{h.currency_symbol}</span>
                       <span className="text-[#848e9c] w-20 text-right">{h.balance}</span>
-                      <span className="text-[#848e9c] w-24 text-right">{formatINR(h.current_price)}</span>
-                      <span className="text-white font-semibold w-24 text-right">{formatINR(h.value_inr)}</span>
+                      <span className="text-[#848e9c] w-24 text-right">{formatCurrency(h.current_price, 'USDT')}</span>
+                      <span className="text-white font-semibold w-24 text-right">{formatCurrency(h.value_inr, 'USDT')}</span>
                     </div>
                   ))}
                 </div>
@@ -265,7 +271,7 @@ export default function BalanceStatsPage() {
                       <span className="text-white font-medium">{TX_LABELS[act.transaction_type] || act.transaction_type}</span>
                       <span className="text-[#848e9c] text-[10px]">
                         {act.currency_symbol}
-                        {act.transaction_fees > 0 ? ` · Fee: ${formatINR(act.transaction_fees)}` : ''}
+                        {act.transaction_fees > 0 ? ` · Fee: ${formatCurrency(act.transaction_fees, act.currency_symbol)}` : ''}
                       </span>
                     </div>
                     <div className="text-right">
@@ -281,7 +287,7 @@ export default function BalanceStatsPage() {
             )}
             <div className="mt-3 pt-3 border-t border-[#1e2433] flex justify-between text-xs">
               <span className="text-[#848e9c]">Total Fees Paid</span>
-              <span className="text-white font-semibold">{formatINR(stats.total_fees_paid)}</span>
+              <span className="text-white font-semibold">{formatCurrency(stats.total_fees_paid, 'USDT')}</span>
             </div>
           </div>
         </div>

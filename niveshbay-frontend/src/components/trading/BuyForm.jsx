@@ -1,9 +1,9 @@
 import { useState, useMemo, useEffect } from 'react';
-import { formatINR } from '../../utils/formatCurrency';
+import { formatINR, formatCurrency } from '../../utils/formatCurrency';
 import { placeBuyOrder } from '../../api/orders';
 import toast from 'react-hot-toast';
 
-export default function BuyForm({ symbol, currentPrice, balance, user, onOrderPlaced, orderType, fillData }) {
+export default function BuyForm({ symbol, currentPrice, balance, user, onOrderPlaced, orderType, fillData, base, quote }) {
   const [amount, setAmount] = useState('');
   const [price, setPrice] = useState('');
   const [slider, setSlider] = useState(0);
@@ -33,7 +33,8 @@ export default function BuyForm({ symbol, currentPrice, balance, user, onOrderPl
   const feeINR = totalINR * 0.001;
   const youPay = totalINR + feeINR;
 
-  const coin = symbol?.split('-')[0] || 'SOL';
+  const coin = base || symbol?.split(/[-_/]/)[0] || 'SOL';
+  const quoteSymbol = quote || symbol?.split(/[-_/]/)[1] || 'INR';
 
   function handleSlider(pct) {
     setSlider(pct);
@@ -80,7 +81,7 @@ export default function BuyForm({ symbol, currentPrice, balance, user, onOrderPl
         <div className="flex justify-between items-center mb-3">
           <span className="text-[10px] text-[#848e9c] uppercase font-bold tracking-wider">Buy {coin}</span>
           <p className="text-xs text-[#848e9c]">
-            Avbl: <span className="text-[#0ecb81] font-bold">{formatINR(balance)}</span>
+            Avbl: <span className="text-[#0ecb81] font-bold">{formatCurrency(balance, quoteSymbol)}</span>
           </p>
         </div>
 
@@ -95,7 +96,7 @@ export default function BuyForm({ symbol, currentPrice, balance, user, onOrderPl
                 placeholder={currentPrice?.toFixed(2) || '0.00'}
                 className="flex-1 bg-transparent text-white text-right focus:outline-none pr-2 font-bold"
               />
-              <span className="text-[#848e9c] font-semibold">INR</span>
+              <span className="text-[#848e9c] font-semibold">{quoteSymbol}</span>
             </div>
           )}
 
@@ -140,14 +141,14 @@ export default function BuyForm({ symbol, currentPrice, balance, user, onOrderPl
           <div className="flex items-center bg-[#1e2433] border border-[#2b3548] rounded px-3 py-2 text-xs focus-within:border-[#ffd333] transition">
             <span className="text-[#848e9c] w-14 font-semibold">Total</span>
             <span className="flex-1 text-white text-right font-bold pr-2">
-              {totalINR > 0 ? formatINR(totalINR) : '0.00'}
+              {totalINR > 0 ? formatCurrency(totalINR, quoteSymbol) : '0.00'}
             </span>
-            <span className="text-[#848e9c] font-semibold">INR</span>
+            <span className="text-[#848e9c] font-semibold">{quoteSymbol}</span>
           </div>
 
           <div className="flex justify-between text-[10px] text-[#848e9c] px-1">
-            <span>Fee (0.1%): {formatINR(feeINR)}</span>
-            <span>You pay: <span className="text-white font-bold">{formatINR(youPay)}</span></span>
+            <span>Fee (0.1%): {formatCurrency(feeINR, quoteSymbol)}</span>
+            <span>You pay: <span className="text-white font-bold">{formatCurrency(youPay, quoteSymbol)}</span></span>
           </div>
         </div>
       </div>

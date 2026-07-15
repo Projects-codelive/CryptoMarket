@@ -408,6 +408,13 @@ exports.placeBuyOrder = async (req, res) => {
     conn = await pool.getConnection();
     await conn.beginTransaction();
 
+    const [[pair]] = await conn.query('SELECT status FROM dbt_coinpair WHERE (symbol = ? OR market_symbol = ?) AND status = 1', [market, market]);
+    if (!pair) {
+      await conn.rollback();
+      conn.release();
+      return res.json({ status: 0, message: 'Trading pair is inactive or not found.' });
+    }
+
     const buyFeesPct = await getFeePercent(conn, 'BUY', quoteSymbol);
     const sellFeesPct = await getFeePercent(conn, 'SELL', quoteSymbol);
 
@@ -552,6 +559,13 @@ exports.placeSellOrder = async (req, res) => {
     const pool = await connect();
     conn = await pool.getConnection();
     await conn.beginTransaction();
+
+    const [[pair]] = await conn.query('SELECT status FROM dbt_coinpair WHERE (symbol = ? OR market_symbol = ?) AND status = 1', [market, market]);
+    if (!pair) {
+      await conn.rollback();
+      conn.release();
+      return res.json({ status: 0, message: 'Trading pair is inactive or not found.' });
+    }
 
     const buyFeesPct = await getFeePercent(conn, 'BUY', quoteSymbol);
     const sellFeesPct = await getFeePercent(conn, 'SELL', quoteSymbol);

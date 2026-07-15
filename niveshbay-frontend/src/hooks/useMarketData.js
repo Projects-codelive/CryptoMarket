@@ -17,40 +17,60 @@ const DEFAULT_COINS = [
 
 export function useMarketData(symbol) {
   const { data, error, isLoading, mutate } = useSWR(
-    symbol ? `/markets` : null,
+    '/markets',
     fetcher,
     { refreshInterval: 10000 }
   );
 
   const { prices } = useSocket() || {};
 
-  const dbCoins = (data || []).map(coin => {
-    let market_symbol = coin.symbol ? coin.symbol.replace('_', '-') : `${coin.currency_symbol}-${coin.market_symbol}`;
-    const def = DEFAULT_COINS.find(c => c.market_symbol === market_symbol);
-    return {
-      id: coin.id,
-      market_symbol,
-      name: coin.name || def?.name || coin.currency_symbol || '',
-      price: coin.last_price || coin.initial_price || def?.price || 0,
-      change_24h: coin.price_change_24h || def?.change_24h || 0,
-      high_24h: coin.price_high_24h || def?.high_24h || 0,
-      low_24h: coin.price_low_24h || def?.low_24h || 0,
-      volume_24h: coin.volume_24h || def?.volume_24h || 0,
-    };
-  });
+  const dbCoins = useMemo(() => {
+    return (data || []).map(coin => {
+      let market_symbol = coin.symbol ? coin.symbol.replace('_', '-') : `${coin.currency_symbol}-${coin.market_symbol}`;
+      const def = DEFAULT_COINS.find(c => c.market_symbol === market_symbol);
+      
+      let price = parseFloat(coin.last_price || coin.initial_price || def?.price || 0);
+      let change_24h = parseFloat(coin.price_change_24h || def?.change_24h || 0);
+      let high_24h = parseFloat(coin.price_high_24h || def?.high_24h || 0);
+      let low_24h = parseFloat(coin.price_low_24h || def?.low_24h || 0);
+      let volume_24h = parseFloat(coin.volume_24h || def?.volume_24h || 0);
 
-  const coinsMap = new Map();
-  dbCoins.forEach(c => coinsMap.set(c.market_symbol, c));
-  DEFAULT_COINS.forEach(c => {
-    if (!coinsMap.has(c.market_symbol)) {
-      coinsMap.set(c.market_symbol, c);
+      if (price <= 0) {
+        const inrCounterpart = DEFAULT_COINS.find(c => c.market_symbol === `${coin.currency_symbol}-INR`);
+        if (inrCounterpart) {
+          price = inrCounterpart.price / 83;
+          change_24h = inrCounterpart.change_24h;
+          high_24h = inrCounterpart.high_24h / 83;
+          low_24h = inrCounterpart.low_24h / 83;
+          volume_24h = inrCounterpart.volume_24h;
+        }
+      }
+
+      return {
+        id: coin.id,
+        market_symbol,
+        currency_symbol: coin.currency_symbol || market_symbol.split('-')[0],
+        quote_symbol: coin.market_symbol || market_symbol.split('-')[1],
+        symbol_db: coin.symbol || `${coin.currency_symbol}_${coin.market_symbol}`,
+        name: coin.name || def?.name || coin.currency_symbol || '',
+        price,
+        change_24h,
+        high_24h,
+        low_24h,
+        volume_24h,
+      };
+    });
+  }, [data]);
+
+  const coins = useMemo(() => {
+    if (!data) {
+      return [];
     }
-  });
-
-  const coins = Array.from(coinsMap.values());
+    return dbCoins;
+  }, [data, dbCoins]);
 
   const normalizedSymbol = symbol ? symbol.replace(/[_/]/g, '-') : 'SOL-INR';
-  const activeCoin = coins.find(c => c.market_symbol === normalizedSymbol) || DEFAULT_COINS.find(c => c.market_symbol === normalizedSymbol);
+  const activeCoin = coins.find(c => c.market_symbol === normalizedSymbol);
 
   const livePrice = prices?.[normalizedSymbol];
 

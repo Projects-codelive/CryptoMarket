@@ -5,6 +5,7 @@ import { useSocket } from '../../context/SocketContext';
 import api from '../../api/axiosInstance';
 
 export default function TradingChart({ symbol }) {
+  const { activeCoin } = useMarketData(symbol);
   const chartContainerRef = useRef(null);
   const chartRef = useRef(null);
   const seriesRef = useRef(null);
@@ -15,7 +16,7 @@ export default function TradingChart({ symbol }) {
   const [activeTab, setActiveTab] = useState('chart');
 
   const normalizedSymbol = symbol?.replace(/[_/]/g, '-') || 'SOL-INR';
-  const dbSymbol = symbol ? symbol.replace('-', '_') : 'SOL_INR';
+  const dbSymbol = activeCoin?.symbol_db || (symbol ? symbol.replace('-', '_') : 'SOL_INR');
 
   const refreshChartData = useCallback(async (interval) => {
     try {
@@ -213,7 +214,7 @@ export default function TradingChart({ symbol }) {
       {/* Candlestick Stats Sub-Bar */}
       <div className="flex items-center justify-between px-3 py-1.5 border-b border-[#1e2433] text-[10px] bg-[#0d111b] text-[#848e9c]">
         <div className="flex items-center gap-3">
-          <span className="text-white font-semibold">{symbol || 'SOL-INR'} · Crypto</span>
+          <span className="text-white font-semibold">{dbSymbol} · Crypto</span>
           {lastCandle && (
             <div className="flex gap-2">
               <span>O <span className="text-[#0ecb81]">{parseFloat(lastCandle.open).toFixed(2)}</span></span>

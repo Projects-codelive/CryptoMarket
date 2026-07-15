@@ -1,13 +1,18 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSocket } from '../../context/SocketContext';
-import { formatINR } from '../../utils/formatCurrency';
+import { formatINR, formatCurrency } from '../../utils/formatCurrency';
+import { useMarketData } from '../../hooks/useMarketData';
 import api from '../../api/axiosInstance';
 
 export default function PriceHeader({ symbol }) {
+  const { activeCoin } = useMarketData(symbol);
   const { prices } = useSocket() || {};
   const prevPriceRef = useRef(null);
 
-  const dbSymbol = symbol ? symbol.replace('-', '_') : 'SOL_INR';
+  const currencySymbol = activeCoin?.currency_symbol || symbol?.split(/[-_/]/)[0] || 'SOL';
+  const quoteSymbol = activeCoin?.quote_symbol || symbol?.split(/[-_/]/)[1] || 'INR';
+
+  const dbSymbol = activeCoin?.symbol_db || (symbol ? symbol.replace('-', '_') : 'SOL_INR');
   const normalizedSymbol = symbol?.replace(/[_/]/g, '-') || 'SOL-INR';
   const livePrice = prices?.[normalizedSymbol];
 
@@ -72,13 +77,19 @@ export default function PriceHeader({ symbol }) {
     }
   }, [livePrice]);
 
-  const isPositive = change >= 0;
+  const displayPrice = price || activeCoin?.price || 0;
+  const displayChange = change || activeCoin?.change_24h || 0;
+  const displayHigh = high || activeCoin?.high_24h || 0;
+  const displayLow = low || activeCoin?.low_24h || 0;
+  const displayVol = vol || activeCoin?.volume_24h || 0;
+
+  const isPositive = displayChange >= 0;
   const priceColor = direction === 'up' ? '#0ecb81' : direction === 'down' ? '#f6465d' : (isPositive ? '#0ecb81' : '#f6465d');
 
   if (!loaded) {
     return (
       <div className="flex items-center gap-4 px-4 py-1.5 bg-[#0b0f19] border-b border-[#1e2433] text-xs">
-        <span className="text-white font-bold text-sm">{symbol?.replace('-', '/') || 'SOL/INR'}</span>
+        <span className="text-white font-bold text-sm">{currencySymbol}/{quoteSymbol}</span>
         <span className="text-lg font-bold text-[#848e9c]">--</span>
       </div>
     );
@@ -86,16 +97,16 @@ export default function PriceHeader({ symbol }) {
 
   return (
     <div className="flex items-center gap-4 px-4 py-1.5 bg-[#0b0f19] border-b border-[#1e2433] text-xs">
-      <span className="text-white font-bold text-sm">{symbol?.replace('-', '/') || 'SOL/INR'}</span>
+      <span className="text-white font-bold text-sm">{currencySymbol}/{quoteSymbol}</span>
       <span className="text-lg font-bold" style={{ color: priceColor }}>
-        {price ? formatINR(price) : '--'}
+        {displayPrice ? formatCurrency(displayPrice, quoteSymbol) : '--'}
       </span>
       <span className={isPositive ? 'text-[#0ecb81]' : 'text-[#f6465d]'}>
-        {change ? `${isPositive ? '+' : ''}${Number(change).toFixed(2)}%` : '--'}
+        {displayChange ? `${isPositive ? '+' : ''}${Number(displayChange).toFixed(2)}%` : '0.00%'}
       </span>
-      <span className="text-[#848e9c]">24h High: <span className="text-white">{high ? formatINR(high) : '--'}</span></span>
-      <span className="text-[#848e9c]">24h Low: <span className="text-white">{low ? formatINR(low) : '--'}</span></span>
-      <span className="text-[#848e9c]">24h Vol: <span className="text-white">{vol ? Number(vol).toLocaleString('en-IN') : '--'}</span></span>
+      <span className="text-[#848e9c]">24h High: <span className="text-white">{displayHigh ? formatCurrency(displayHigh, quoteSymbol) : '--'}</span></span>
+      <span className="text-[#848e9c]">24h Low: <span className="text-white">{displayLow ? formatCurrency(displayLow, quoteSymbol) : '--'}</span></span>
+      <span className="text-[#848e9c]">24h Vol: <span className="text-white">{displayVol ? Number(displayVol).toLocaleString('en-IN') : '0'}</span></span>
     </div>
   );
 }

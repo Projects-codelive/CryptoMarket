@@ -5,7 +5,7 @@ export default function CoinSelector({ symbol, onSelect }) {
   const { coins } = useMarketData(symbol);
   const navigate = useNavigate();
 
-  const pair = symbol || 'SOL-INR';
+  const pair = symbol ? symbol.replace(/[_/]/g, '-') : 'SOL-INR';
   const [base, quote] = pair.split('-');
 
   return (

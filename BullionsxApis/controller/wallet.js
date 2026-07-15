@@ -11,23 +11,62 @@ exports.getOverview = async (req, res) => {
     conn = await pool.getConnection();
     const userId = req.user.user_id;
 
+    // Build set of active coin symbols from cryptocoins and coinpairs
+    const [cryptocoins] = await conn.query('SELECT coin_symbol FROM dbt_cryptocoin WHERE status = 1');
+    const [coinpairs] = await conn.query('SELECT currency_symbol, market_symbol FROM dbt_coinpair WHERE status = 1');
+
+    const activeCoinSymbols = new Set(['INR', 'USDT']);
+    for (const c of cryptocoins) {
+        if (c.coin_symbol) activeCoinSymbols.add(c.coin_symbol.toUpperCase());
+    }
+    for (const p of coinpairs) {
+        if (p.currency_symbol) activeCoinSymbols.add(p.currency_symbol.toUpperCase());
+        if (p.market_symbol) activeCoinSymbols.add(p.market_symbol.toUpperCase());
+    }
+
     let coins;
     try {
-      [coins] = await conn.query('SELECT * FROM dbt_cryptocoin ORDER BY coin_position ASC');
+      [coins] = await conn.query('SELECT * FROM dbt_cryptocoin WHERE status = 1 ORDER BY coin_position ASC');
     } catch (_) {
-      [coins] = await conn.query('SELECT * FROM dbt_cryptocoin');
+      [coins] = await conn.query('SELECT * FROM dbt_cryptocoin WHERE status = 1');
     }
+
+    coins = coins.filter(coin => {
+      const sym = (coin.symbol || coin.coin_symbol || '').toUpperCase();
+      return activeCoinSymbols.has(sym);
+    });
+
     const [balances] = await conn.query('SELECT currency_symbol, SUM(balance) as balance, SUM(sharewallet) as sharewallet, SUM(fundwallet) as fundwallet FROM dbt_balance WHERE user_id = ? GROUP BY currency_symbol', [userId]);
-    const [prices] = await conn.query(
-      'SELECT ch.coin_symbol, ch.last_price FROM dbt_coinhistory ch INNER JOIN (SELECT coin_symbol, MAX(id) as maxid FROM dbt_coinhistory GROUP BY coin_symbol) latest ON ch.id = latest.maxid'
-    );
+
+    const priceMap = {};
+    const [pairRows] = await conn.query('SELECT symbol, initial_price FROM dbt_coinpair WHERE status = 1');
+    for (const row of pairRows) {
+        priceMap[row.symbol] = parseFloat(row.initial_price || 0);
+    }
+    const [priceRows] = await conn.query(`
+        SELECT ch.market_symbol, ch.last_price
+        FROM dbt_coinhistory ch
+        INNER JOIN (
+            SELECT market_symbol, MAX(id) AS max_id
+            FROM dbt_coinhistory
+            GROUP BY market_symbol
+        ) latest ON ch.id = latest.max_id
+    `);
+    for (const row of priceRows) {
+        priceMap[row.market_symbol] = parseFloat(row.last_price || 0);
+    }
+
+    let usdtInrRate = 83.0;
+    if (priceMap['USDT_INR'] && priceMap['USDT_INR'] > 0) {
+        usdtInrRate = priceMap['USDT_INR'];
+    } else if (priceMap['INR_USDT'] && priceMap['INR_USDT'] > 0) {
+        usdtInrRate = 1.0 / priceMap['INR_USDT'];
+    }
+
     const [openOrders] = await conn.query(
       "SELECT market_symbol, SUM(bid_qty_available) as locked_qty FROM dbt_biding WHERE user_id = ? AND status = 2 GROUP BY market_symbol",
       [userId]
     );
-
-    const priceMap = {};
-    prices.forEach(p => { priceMap[p.coin_symbol] = parseFloat(p.last_price || 0); });
 
     const lockedMap = {};
     openOrders.forEach(o => {
@@ -47,14 +86,44 @@ exports.getOverview = async (req, res) => {
     let totalEstimated = 0;
     const overview = [];
 
+    const DEFAULT_COINS = [
+      { market_symbol: 'BTC-INR', price: 5380218.77 },
+      { market_symbol: 'ETH-INR', price: 295872.35 },
+      { market_symbol: 'SOL-INR', price: 5741.94 },
+      { market_symbol: 'XRP-INR', price: 48.47 },
+      { market_symbol: 'DOGE-INR', price: 12.04 },
+      { market_symbol: 'ADA-INR', price: 40.26 },
+      { market_symbol: 'BNB-INR', price: 26823.50 },
+    ];
+
     coins.forEach(coin => {
       const sym = coin.symbol || coin.coin_symbol;
       if (!sym) return;
       const bal = balMap[sym] || { spot: 0, funding: 0, share: 0 };
-      const price = sym === 'INR' ? 1 : (priceMap[sym] || 0);
+
+      let priceUsdt = 0;
+      if (sym === 'USDT') {
+          priceUsdt = 1.0;
+      } else if (sym === 'INR') {
+          priceUsdt = 1.0 / usdtInrRate;
+      } else {
+          const usdtPair = `${sym}_USDT`;
+          const inrPair = `${sym}_INR`;
+          if (priceMap[usdtPair] !== undefined) {
+              priceUsdt = priceMap[usdtPair];
+          } else if (priceMap[inrPair] !== undefined) {
+              priceUsdt = priceMap[inrPair] / usdtInrRate;
+          } else {
+              const counterpart = DEFAULT_COINS.find(c => c.market_symbol === `${sym}-INR`);
+              if (counterpart) {
+                  priceUsdt = counterpart.price / usdtInrRate;
+              }
+          }
+      }
+
       const inTrade = lockedMap[sym] || 0;
       const total = bal.spot + bal.funding + bal.share + inTrade;
-      const usdValue = total * price;
+      const usdValue = total * priceUsdt;
       totalEstimated += usdValue;
       overview.push({
         coin: sym,
@@ -64,7 +133,7 @@ exports.getOverview = async (req, res) => {
         share: bal.share,
         inTrade,
         total,
-        price,
+        price: priceUsdt,
         usdValue,
       });
     });
@@ -72,13 +141,35 @@ exports.getOverview = async (req, res) => {
     // Add any currencies from balance not in dbt_cryptocoin
     const added = new Set(coins.map(c => c.symbol || c.coin_symbol).filter(Boolean));
     balances.forEach(b => {
+      const sym = (b.currency_symbol || '').toUpperCase();
+      if (!activeCoinSymbols.has(sym)) return;
       if (added.has(b.currency_symbol)) return;
       added.add(b.currency_symbol);
       const bal = balMap[b.currency_symbol] || { spot: 0, funding: 0, share: 0 };
-      const price = b.currency_symbol === 'INR' ? 1 : (priceMap[b.currency_symbol] || 0);
+
+      let priceUsdt = 0;
+      if (b.currency_symbol === 'USDT') {
+          priceUsdt = 1.0;
+      } else if (b.currency_symbol === 'INR') {
+          priceUsdt = 1.0 / usdtInrRate;
+      } else {
+          const usdtPair = `${b.currency_symbol}_USDT`;
+          const inrPair = `${b.currency_symbol}_INR`;
+          if (priceMap[usdtPair] !== undefined) {
+              priceUsdt = priceMap[usdtPair];
+          } else if (priceMap[inrPair] !== undefined) {
+              priceUsdt = priceMap[inrPair] / usdtInrRate;
+          } else {
+              const counterpart = DEFAULT_COINS.find(c => c.market_symbol === `${b.currency_symbol}-INR`);
+              if (counterpart) {
+                  priceUsdt = counterpart.price / usdtInrRate;
+              }
+          }
+      }
+
       const inTrade = lockedMap[b.currency_symbol] || 0;
       const total = bal.spot + bal.funding + bal.share + inTrade;
-      const usdValue = total * price;
+      const usdValue = total * priceUsdt;
       totalEstimated += usdValue;
       overview.push({
         coin: b.currency_symbol,
@@ -88,7 +179,7 @@ exports.getOverview = async (req, res) => {
         share: bal.share,
         inTrade,
         total,
-        price,
+        price: priceUsdt,
         usdValue,
       });
     });

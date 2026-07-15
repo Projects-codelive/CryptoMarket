@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import Sidebar from '../components/layout/Sidebar';
 import OrderBook from '../components/orderbook/OrderBook';
@@ -18,10 +18,20 @@ export default function TradePage() {
   const { symbol: paramSymbol } = useParams();
   const symbol = paramSymbol || 'SOL-INR';
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { balance, orderHistory, refreshBalance, refreshOrderHistory } = usePortfolio();
   const { stats } = useBalanceStats();
-  const { activeCoin } = useMarketData(symbol);
+  const { coins, activeCoin, isLoading } = useMarketData(symbol);
   const { balanceUpdate } = useSocket() || {};
+
+  useEffect(() => {
+    if (!isLoading && coins.length > 0 && !activeCoin) {
+      const defaultPair = coins[0]?.market_symbol;
+      if (defaultPair) {
+        navigate(`/trade/${defaultPair}`, { replace: true });
+      }
+    }
+  }, [isLoading, coins, activeCoin, navigate]);
 
   useEffect(() => {
     if (balanceUpdate && balanceUpdate.user_id === (user?.user_id || user?.id)) {

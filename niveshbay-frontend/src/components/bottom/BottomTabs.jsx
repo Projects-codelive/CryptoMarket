@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { usePortfolio } from '../../hooks/usePortfolio';
 import { cancelOrder } from '../../api/orders';
-import { formatINR, formatAmount } from '../../utils/formatCurrency';
+import { formatINR, formatAmount, formatCurrency } from '../../utils/formatCurrency';
 import { useSocket } from '../../context/SocketContext';
 import toast from 'react-hot-toast';
 
@@ -46,16 +46,16 @@ export default function BottomTabs({ symbol }) {
     }
   }
 
-  function formatPriceINR(price) {
-    return formatINR(parseFloat(price || 0));
+  function formatPriceWithQuote(price, quote) {
+    return formatCurrency(parseFloat(price || 0), quote);
   }
 
   function formatQty(order) {
     return formatAmount(parseFloat(order.bid_qty_available || order.bid_qty || order.volume || 0));
   }
 
-  function formatTotal(order) {
-    return formatINR(parseFloat(order.total_amount || order.amount || 0));
+  function formatTotalWithQuote(order, quote) {
+    return formatCurrency(parseFloat(order.total_amount || order.amount || 0), quote);
   }
 
   function formatDate(dateStr) {
@@ -94,15 +94,16 @@ export default function BottomTabs({ symbol }) {
                     <th className="text-left px-3 py-1.5 font-semibold">Date</th>
                     <th className="text-left px-3 py-1.5 font-semibold">Pair</th>
                     <th className="text-left px-3 py-1.5 font-semibold">Type</th>
-                    <th className="text-right px-3 py-1.5 font-semibold">Price (INR)</th>
+                    <th className="text-right px-3 py-1.5 font-semibold">Price</th>
                     <th className="text-right px-3 py-1.5 font-semibold">Amount</th>
                     <th className="text-right px-3 py-1.5 font-semibold">Filled</th>
-                    <th className="text-right px-3 py-1.5 font-semibold">Total (INR)</th>
+                    <th className="text-right px-3 py-1.5 font-semibold">Total</th>
                     <th className="text-center px-3 py-1.5 font-semibold">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {openOrders.map((order, i) => {
+                    const orderQuote = order.market_symbol ? order.market_symbol.split(/[-_/]/)[1] : 'INR';
                     const filled = order.bid_qty > 0
                       ? ((order.bid_qty - order.bid_qty_available) / order.bid_qty * 100).toFixed(1)
                       : '0.0';
@@ -111,10 +112,10 @@ export default function BottomTabs({ symbol }) {
                         <td className="px-3 py-2 text-white">{formatDate(order.open_order)}</td>
                         <td className="px-3 py-2 text-white font-medium">{order.market_symbol?.replace('_', '-')}</td>
                         <td className={`px-3 py-2 font-bold ${order.bid_type === 'BUY' ? 'text-[#0ecb81]' : 'text-[#f6465d]'}`}>{order.bid_type}</td>
-                        <td className="px-3 py-2 text-right text-white">{formatPriceINR(order.bid_price)}</td>
+                        <td className="px-3 py-2 text-right text-white">{formatPriceWithQuote(order.bid_price, orderQuote)}</td>
                         <td className="px-3 py-2 text-right text-white">{formatAmount(parseFloat(order.bid_qty), 4)}</td>
                         <td className="px-3 py-2 text-right text-white">{filled}%</td>
-                        <td className="px-3 py-2 text-right text-white">{formatTotal(order)}</td>
+                        <td className="px-3 py-2 text-right text-white">{formatTotalWithQuote(order, orderQuote)}</td>
                         <td className="px-3 py-2 text-center">
                           <button
                             onClick={() => handleCancelOrder(order.id)}
@@ -143,34 +144,37 @@ export default function BottomTabs({ symbol }) {
                     <th className="text-left px-3 py-1.5 font-semibold">Date</th>
                     <th className="text-left px-3 py-1.5 font-semibold">Pair</th>
                     <th className="text-left px-3 py-1.5 font-semibold">Type</th>
-                    <th className="text-right px-3 py-1.5 font-semibold">Price (INR)</th>
+                    <th className="text-right px-3 py-1.5 font-semibold">Price</th>
                     <th className="text-right px-3 py-1.5 font-semibold">Amount</th>
-                    <th className="text-right px-3 py-1.5 font-semibold">Total (INR)</th>
-                    <th className="text-right px-3 py-1.5 font-semibold">Fee (INR)</th>
+                    <th className="text-right px-3 py-1.5 font-semibold">Total</th>
+                    <th className="text-right px-3 py-1.5 font-semibold">Fee</th>
                     <th className="text-center px-3 py-1.5 font-semibold">Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {orderHistory.map((order, i) => (
-                    <tr key={order.id || i} className="border-b border-[#1e2433]/50 hover:bg-[#1e2433]/30">
-                      <td className="px-3 py-2 text-white">{formatDate(order.open_order)}</td>
-                      <td className="px-3 py-2 text-white font-medium">{order.market_symbol?.replace('_', '-')}</td>
-                      <td className={`px-3 py-2 font-bold ${order.bid_type === 'BUY' ? 'text-[#0ecb81]' : 'text-[#f6465d]'}`}>{order.bid_type}</td>
-                      <td className="px-3 py-2 text-right text-white">{formatPriceINR(order.bid_price)}</td>
-                      <td className="px-3 py-2 text-right text-white">{formatAmount(parseFloat(order.bid_qty), 4)}</td>
-                      <td className="px-3 py-2 text-right text-white">{formatTotal(order)}</td>
-                      <td className="px-3 py-2 text-right text-white">{formatPriceINR(order.fees_amount)}</td>
-                      <td className="px-3 py-2 text-center">
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                          order.status === 1 ? 'text-[#0ecb81] bg-[#0ecb81]/10' :
-                          order.status === 3 ? 'text-[#848e9c] bg-[#848e9c]/10' :
-                          'text-[#f0b90b] bg-[#f0b90b]/10'
-                        }`}>
-                          {order.status === 1 ? 'Filled' : order.status === 3 ? 'Cancelled' : 'Open'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                  {orderHistory.map((order, i) => {
+                    const orderQuote = order.market_symbol ? order.market_symbol.split(/[-_/]/)[1] : 'INR';
+                    return (
+                      <tr key={order.id || i} className="border-b border-[#1e2433]/50 hover:bg-[#1e2433]/30">
+                        <td className="px-3 py-2 text-white">{formatDate(order.open_order)}</td>
+                        <td className="px-3 py-2 text-white font-medium">{order.market_symbol?.replace('_', '-')}</td>
+                        <td className={`px-3 py-2 font-bold ${order.bid_type === 'BUY' ? 'text-[#0ecb81]' : 'text-[#f6465d]'}`}>{order.bid_type}</td>
+                        <td className="px-3 py-2 text-right text-white">{formatPriceWithQuote(order.bid_price, orderQuote)}</td>
+                        <td className="px-3 py-2 text-right text-white">{formatAmount(parseFloat(order.bid_qty), 4)}</td>
+                        <td className="px-3 py-2 text-right text-white">{formatTotalWithQuote(order, orderQuote)}</td>
+                        <td className="px-3 py-2 text-right text-white">{formatPriceWithQuote(order.fees_amount, orderQuote)}</td>
+                        <td className="px-3 py-2 text-center">
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                            order.status === 1 ? 'text-[#0ecb81] bg-[#0ecb81]/10' :
+                            order.status === 3 ? 'text-[#848e9c] bg-[#848e9c]/10' :
+                            'text-[#f0b90b] bg-[#f0b90b]/10'
+                          }`}>
+                            {order.status === 1 ? 'Filled' : order.status === 3 ? 'Cancelled' : 'Open'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             )}
@@ -225,15 +229,16 @@ export default function BottomTabs({ symbol }) {
                     <th className="text-left px-3 py-1.5 font-semibold">Date</th>
                     <th className="text-left px-3 py-1.5 font-semibold">Pair</th>
                     <th className="text-left px-3 py-1.5 font-semibold">Type</th>
-                    <th className="text-right px-3 py-1.5 font-semibold">Price (INR)</th>
+                    <th className="text-right px-3 py-1.5 font-semibold">Price</th>
                     <th className="text-right px-3 py-1.5 font-semibold">Amount</th>
                     <th className="text-right px-3 py-1.5 font-semibold">Filled</th>
-                    <th className="text-right px-3 py-1.5 font-semibold">Total (INR)</th>
+                    <th className="text-right px-3 py-1.5 font-semibold">Total</th>
                     <th className="text-center px-3 py-1.5 font-semibold">Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {cancelledOrders.map((order, i) => {
+                    const orderQuote = order.market_symbol ? order.market_symbol.split(/[-_/]/)[1] : 'INR';
                     const filled = order.bid_qty > 0
                       ? ((order.bid_qty - order.bid_qty_available) / order.bid_qty * 100).toFixed(1)
                       : '0.0';
@@ -242,10 +247,10 @@ export default function BottomTabs({ symbol }) {
                         <td className="px-3 py-2 text-white">{formatDate(order.open_order)}</td>
                         <td className="px-3 py-2 text-white font-medium">{order.market_symbol?.replace('_', '-')}</td>
                         <td className={`px-3 py-2 font-bold ${order.bid_type === 'BUY' ? 'text-[#0ecb81]' : 'text-[#f6465d]'}`}>{order.bid_type}</td>
-                        <td className="px-3 py-2 text-right text-white">{formatPriceINR(order.bid_price)}</td>
+                        <td className="px-3 py-2 text-right text-white">{formatPriceWithQuote(order.bid_price, orderQuote)}</td>
                         <td className="px-3 py-2 text-right text-white">{formatAmount(parseFloat(order.bid_qty), 4)}</td>
                         <td className="px-3 py-2 text-right text-white">{filled}%</td>
-                        <td className="px-3 py-2 text-right text-white">{formatTotal(order)}</td>
+                        <td className="px-3 py-2 text-right text-white">{formatTotalWithQuote(order, orderQuote)}</td>
                         <td className="px-3 py-2 text-center">
                           <span className="text-[10px] font-bold text-[#848e9c] bg-[#848e9c]/10 px-1.5 py-0.5 rounded">Cancelled</span>
                         </td>

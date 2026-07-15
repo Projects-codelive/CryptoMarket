@@ -4,27 +4,30 @@ import SellForm from './SellForm';
 import { useAuth } from '../../context/AuthContext';
 import { usePortfolio } from '../../hooks/usePortfolio';
 import { useSocket } from '../../context/SocketContext';
+import { useMarketData } from '../../hooks/useMarketData';
 import { getUserBalance } from '../../api/orders';
 
 export default function TradingPanel({ symbol, currentPrice, sellFormFillData, buyFormFillData }) {
   const { user } = useAuth();
   const { refreshOpenOrders, refreshMyTrades } = usePortfolio();
   const { balanceUpdate } = useSocket() || {};
+  const { activeCoin } = useMarketData(symbol);
   const [orderType, setOrderType] = useState('limit');
   const [coinBalance, setCoinBalance] = useState(0);
   const [inrBalance, setInrBalance] = useState(0);
 
-  const base = symbol?.split('-')[0] || 'SOL';
+  const base = activeCoin?.currency_symbol || symbol?.split(/[-_/]/)[0] || 'SOL';
+  const quote = activeCoin?.quote_symbol || symbol?.split(/[-_/]/)[1] || 'INR';
 
   const loadBalances = useCallback(() => {
     if (!user) return;
     getUserBalance(user.user_id || user.id, base).then(r => {
       setCoinBalance(parseFloat(r.balance || 0));
     }).catch(() => {});
-    getUserBalance(user.user_id || user.id, 'INR').then(r => {
+    getUserBalance(user.user_id || user.id, quote).then(r => {
       setInrBalance(parseFloat(r.balance || 0));
     }).catch(() => {});
-  }, [user, base]);
+  }, [user, base, quote]);
 
   useEffect(() => { loadBalances(); }, [loadBalances]);
 
@@ -77,6 +80,8 @@ export default function TradingPanel({ symbol, currentPrice, sellFormFillData, b
           onOrderPlaced={onOrderPlaced}
           orderType={orderType}
           fillData={buyFormFillData}
+          base={base}
+          quote={quote}
         />
         <SellForm
           symbol={symbol}
@@ -86,6 +91,8 @@ export default function TradingPanel({ symbol, currentPrice, sellFormFillData, b
           onOrderPlaced={onOrderPlaced}
           fillData={sellFormFillData}
           orderType={orderType}
+          base={base}
+          quote={quote}
         />
       </div>
     </div>

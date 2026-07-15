@@ -19,3 +19,23 @@ export function formatPrice(price, decimals = 2) {
 export function formatAmount(amount, decimals = 4) {
   return Number(amount).toFixed(decimals);
 }
+
+export function formatCurrency(amount, quoteSymbol = 'INR') {
+  if (!quoteSymbol || quoteSymbol.toUpperCase() === 'INR') {
+    return '\u20B9' + Number(amount || 0).toLocaleString('en-IN', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  } else if (quoteSymbol.toUpperCase() === 'USDT') {
+    return '$' + Number(amount || 0).toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  } else {
+    return Number(amount || 0).toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }) + ' ' + quoteSymbol.toUpperCase();
+  }
+}
+

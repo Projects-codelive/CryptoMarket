@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { formatAmount, formatINR } from '../../utils/formatCurrency';
+import { formatAmount, formatINR, formatCurrency } from '../../utils/formatCurrency';
 import { placeSellOrder } from '../../api/orders';
 import toast from 'react-hot-toast';
 
-export default function SellForm({ symbol, currentPrice, baseBalance, user, onOrderPlaced, fillData, orderType }) {
+export default function SellForm({ symbol, currentPrice, baseBalance, user, onOrderPlaced, fillData, orderType, base, quote }) {
   const [amount, setAmount] = useState('');
   const [price, setPrice] = useState('');
   const [slider, setSlider] = useState(0);
@@ -26,7 +26,8 @@ export default function SellForm({ symbol, currentPrice, baseBalance, user, onOr
   const amountNum = parseFloat(amount) || 0;
   const totalINR = amountNum * priceINR;
 
-  const coin = symbol?.split('-')[0] || 'SOL';
+  const coin = base || symbol?.split(/[-_/]/)[0] || 'SOL';
+  const quoteSymbol = quote || symbol?.split(/[-_/]/)[1] || 'INR';
 
   function handleSlider(pct) {
     setSlider(pct);
@@ -87,7 +88,7 @@ export default function SellForm({ symbol, currentPrice, baseBalance, user, onOr
                 placeholder={currentPrice?.toFixed(2) || '0.00'}
                 className="flex-1 bg-transparent text-white text-right focus:outline-none pr-2 font-bold"
               />
-              <span className="text-[#848e9c] font-semibold">INR</span>
+              <span className="text-[#848e9c] font-semibold">{quoteSymbol}</span>
             </div>
           )}
 
@@ -132,9 +133,9 @@ export default function SellForm({ symbol, currentPrice, baseBalance, user, onOr
           <div className="flex items-center bg-[#1e2433] border border-[#2b3548] rounded px-3 py-2 text-xs focus-within:border-[#f6465d] transition">
             <span className="text-[#848e9c] w-14 font-semibold">Total</span>
             <span className="flex-1 text-white text-right font-bold pr-2">
-              {totalINR > 0 ? formatINR(totalINR) : '0.00'}
+              {totalINR > 0 ? formatCurrency(totalINR, quoteSymbol) : '0.00'}
             </span>
-            <span className="text-[#848e9c] font-semibold">INR</span>
+            <span className="text-[#848e9c] font-semibold">{quoteSymbol}</span>
           </div>
         </div>
       </div>
