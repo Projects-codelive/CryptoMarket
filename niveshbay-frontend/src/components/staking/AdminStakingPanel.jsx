@@ -1,41 +1,46 @@
+// AdminStakingPanel.jsx - Updated to use staking / staking_log schema fields
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '../../api/axiosInstance';
-import { formatINR } from '../../utils/formatCurrency';
 
 function StatusBadge({ status }) {
     const map = {
-        ACTIVE: 'bg-[#1a3a3a] text-[#0ecb81]',
-        MATURED: 'bg-[#3a2e1a] text-[#f0b90b]',
-        CLAIMED: 'bg-[#1e2433] text-[#848e9c]',
-        UNSTAKED: 'bg-[#3a1a1a] text-[#f6465d]',
+        ACTIVE:   { bg: '#0ecb81' + '22', text: '#0ecb81', label: '● Active' },
+        MATURED:  { bg: '#f0b90b' + '22', text: '#f0b90b', label: '★ Matured' },
+        CLAIMED:  { bg: '#2b3548',         text: '#848e9c', label: '✓ Claimed' },
+        UNSTAKED: { bg: '#f6465d' + '22', text: '#f6465d', label: '✕ Unstaked' },
     };
+    const s = map[status] || map.CLAIMED;
     return (
-        <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${map[status] || 'bg-[#1e2433] text-[#848e9c]'}`}>
-            {status}
+        <span className="text-[10px] font-bold px-2.5 py-1 rounded-full" style={{ background: s.bg, color: s.text }}>
+            {s.label}
         </span>
     );
 }
 
+const EMPTY_FORM = {
+    coin_symbol: 'MDR',
+    name: '',
+    description: '',
+    start_date: '',
+    end_date: '',
+    plan: '',
+    percentage: ''
+};
+
 export default function AdminStakingPanel({ plans, allStakes, onRefresh }) {
     const [tab, setTab] = useState('plans');
     const [showCreate, setShowCreate] = useState(false);
-    const [form, setForm] = useState({ name: '', min_amount: '', max_amount: '', duration_days: '', apr_percent: '' });
+    const [form, setForm] = useState(EMPTY_FORM);
 
     async function handleCreate(e) {
         e.preventDefault();
         try {
-            const res = await api.post('/api/v1/staking/admin/plans', {
-                name: form.name,
-                min_amount: parseFloat(form.min_amount),
-                max_amount: parseFloat(form.max_amount),
-                duration_days: parseInt(form.duration_days),
-                apr_percent: parseFloat(form.apr_percent)
-            });
+            const res = await api.post('/api/v1/staking/admin/plans', form);
             if (res.data.status === 1) {
                 toast.success('Plan created!');
                 setShowCreate(false);
-                setForm({ name: '', min_amount: '', max_amount: '', duration_days: '', apr_percent: '' });
+                setForm(EMPTY_FORM);
                 if (onRefresh) onRefresh();
             } else {
                 toast.error(res.data.message || 'Failed to create plan.');
@@ -60,7 +65,7 @@ export default function AdminStakingPanel({ plans, allStakes, onRefresh }) {
     }
 
     async function handleDelete(planId) {
-        if (!confirm('Delete this plan? This cannot be undone.')) return;
+        if (!confirm('Delete this plan? Active stakes will block deletion.')) return;
         try {
             const res = await api.delete(`/api/v1/staking/admin/plans/${planId}`);
             if (res.data.status === 1) {
@@ -80,7 +85,8 @@ export default function AdminStakingPanel({ plans, allStakes, onRefresh }) {
 
     return (
         <div>
-            <div className="flex gap-1 bg-[#0b0e11] rounded-lg p-1 mb-6 border border-[#1e2433] w-fit">
+            {/* Tabs */}
+            <div className="flex gap-1 bg-[#0b0e11] rounded-xl p-1 mb-6 border border-[#1e2433] w-fit">
                 {[
                     { key: 'plans', label: 'Plans' },
                     { key: 'stakes', label: 'All Stakes' },
@@ -88,7 +94,7 @@ export default function AdminStakingPanel({ plans, allStakes, onRefresh }) {
                     <button
                         key={t.key}
                         onClick={() => setTab(t.key)}
-                        className={`px-4 py-1.5 text-xs font-bold rounded cursor-pointer transition ${
+                        className={`px-5 py-2 text-xs font-bold rounded-lg cursor-pointer transition ${
                             tab === t.key ? 'bg-[#f0b90b] text-black' : 'text-[#848e9c] hover:text-white'
                         }`}
                     >
@@ -97,119 +103,101 @@ export default function AdminStakingPanel({ plans, allStakes, onRefresh }) {
                 ))}
             </div>
 
+            {/* Plans Tab */}
             {tab === 'plans' && (
                 <div>
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-white font-bold text-sm">Staking Plans</h3>
                         <button
                             onClick={() => setShowCreate(!showCreate)}
-                            className="text-xs bg-[#f0b90b] text-black font-bold px-3 py-1.5 rounded hover:bg-[#ffd333] cursor-pointer"
+                            className="text-xs bg-[#f0b90b] text-black font-bold px-4 py-2 rounded-lg hover:bg-[#ffd333] cursor-pointer transition"
                         >
                             {showCreate ? 'Cancel' : '+ New Plan'}
                         </button>
                     </div>
 
                     {showCreate && (
-                        <form onSubmit={handleCreate} className="bg-[#0b0e11] border border-[#1e2433] rounded-lg p-4 mb-4 space-y-3">
+                        <form onSubmit={handleCreate} className="bg-[#0b0e11] border border-[#1e2433] rounded-xl p-5 mb-5 space-y-4">
+                            <h4 className="text-white font-bold text-sm mb-2">Create New Staking Plan</h4>
                             <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="text-[10px] text-[#848e9c] block mb-0.5">Name</label>
-                                    <input
-                                        value={form.name}
-                                        onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                                        className="w-full bg-[#141822] border border-[#2b3548] rounded px-2 py-1.5 text-white text-xs focus:outline-none focus:border-[#f0b90b]"
-                                        required
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-[10px] text-[#848e9c] block mb-0.5">Duration (days)</label>
-                                    <input
-                                        type="number"
-                                        value={form.duration_days}
-                                        onChange={e => setForm(f => ({ ...f, duration_days: e.target.value }))}
-                                        className="w-full bg-[#141822] border border-[#2b3548] rounded px-2 py-1.5 text-white text-xs focus:outline-none focus:border-[#f0b90b]"
-                                        required
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-[10px] text-[#848e9c] block mb-0.5">Min Amount</label>
-                                    <input
-                                        type="number"
-                                        step="any"
-                                        value={form.min_amount}
-                                        onChange={e => setForm(f => ({ ...f, min_amount: e.target.value }))}
-                                        className="w-full bg-[#141822] border border-[#2b3548] rounded px-2 py-1.5 text-white text-xs focus:outline-none focus:border-[#f0b90b]"
-                                        required
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-[10px] text-[#848e9c] block mb-0.5">Max Amount</label>
-                                    <input
-                                        type="number"
-                                        step="any"
-                                        value={form.max_amount}
-                                        onChange={e => setForm(f => ({ ...f, max_amount: e.target.value }))}
-                                        className="w-full bg-[#141822] border border-[#2b3548] rounded px-2 py-1.5 text-white text-xs focus:outline-none focus:border-[#f0b90b]"
-                                        required
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-[10px] text-[#848e9c] block mb-0.5">APR (%)</label>
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        value={form.apr_percent}
-                                        onChange={e => setForm(f => ({ ...f, apr_percent: e.target.value }))}
-                                        className="w-full bg-[#141822] border border-[#2b3548] rounded px-2 py-1.5 text-white text-xs focus:outline-none focus:border-[#f0b90b]"
+                                {[
+                                    { key: 'coin_symbol', label: 'Coin Symbol', placeholder: 'e.g. MDR' },
+                                    { key: 'name', label: 'Plan Name', placeholder: 'e.g. Bronze' },
+                                    { key: 'plan', label: 'Duration (months)', placeholder: 'e.g. 3' },
+                                    { key: 'percentage', label: '% per Month', placeholder: 'e.g. 2.5' },
+                                    { key: 'start_date', label: 'Start Date', placeholder: '2023-01-01 00:00:00' },
+                                    { key: 'end_date', label: 'End Date', placeholder: '2026-01-01 00:00:00' },
+                                ].map(f => (
+                                    <div key={f.key}>
+                                        <label className="text-[10px] text-[#848e9c] block mb-1">{f.label}</label>
+                                        <input
+                                            value={form[f.key]}
+                                            onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
+                                            placeholder={f.placeholder}
+                                            className="w-full bg-[#141822] border border-[#2b3548] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-[#f0b90b] transition"
+                                            required
+                                        />
+                                    </div>
+                                ))}
+                                <div className="col-span-2">
+                                    <label className="text-[10px] text-[#848e9c] block mb-1">Description</label>
+                                    <textarea
+                                        value={form.description}
+                                        onChange={e => setForm(prev => ({ ...prev, description: e.target.value }))}
+                                        rows={2}
+                                        placeholder="Stake and earn monthly rewards…"
+                                        className="w-full bg-[#141822] border border-[#2b3548] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-[#f0b90b] transition resize-none"
                                         required
                                     />
                                 </div>
                             </div>
                             <button
                                 type="submit"
-                                className="bg-[#f0b90b] text-black font-bold text-xs px-4 py-1.5 rounded hover:bg-[#ffd333] cursor-pointer"
+                                className="bg-[#f0b90b] text-black font-bold text-xs px-5 py-2 rounded-lg hover:bg-[#ffd333] cursor-pointer transition"
                             >
                                 Create Plan
                             </button>
                         </form>
                     )}
 
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto rounded-xl border border-[#1e2433]">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="text-[#848e9c] text-[10px] uppercase tracking-wider border-b border-[#1e2433]">
-                                    <th className="text-left py-3 px-3 font-semibold">Name</th>
-                                    <th className="text-right py-3 px-3 font-semibold">Min</th>
-                                    <th className="text-right py-3 px-3 font-semibold">Max</th>
-                                    <th className="text-right py-3 px-3 font-semibold">Days</th>
-                                    <th className="text-right py-3 px-3 font-semibold">APR</th>
-                                    <th className="text-center py-3 px-3 font-semibold">Status</th>
-                                    <th className="text-right py-3 px-3 font-semibold">Actions</th>
+                                <tr className="bg-[#0f1117] text-[#848e9c] text-[10px] uppercase tracking-wider border-b border-[#1e2433]">
+                                    <th className="text-left py-3 px-4 font-semibold">Coin</th>
+                                    <th className="text-left py-3 px-4 font-semibold">Name</th>
+                                    <th className="text-right py-3 px-4 font-semibold">Duration</th>
+                                    <th className="text-right py-3 px-4 font-semibold">%/Month</th>
+                                    <th className="text-center py-3 px-4 font-semibold">Status</th>
+                                    <th className="text-right py-3 px-4 font-semibold">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody className="divide-y divide-[#1e2433]/50">
                                 {plans.map(p => (
-                                    <tr key={p.id} className="border-b border-[#1e2433]/50 hover:bg-[#1e2433]/30">
-                                        <td className="py-3 px-3 text-white font-semibold text-xs">{p.name}</td>
-                                        <td className="py-3 px-3 text-[#848e9c] text-xs text-right">{formatINR(p.min_amount)}</td>
-                                        <td className="py-3 px-3 text-[#848e9c] text-xs text-right">{formatINR(p.max_amount)}</td>
-                                        <td className="py-3 px-3 text-white text-xs text-right">{p.duration_days}</td>
-                                        <td className="py-3 px-3 text-[#0ecb81] text-xs text-right">{p.apr_percent}%</td>
-                                        <td className="py-3 px-3 text-center">
-                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${p.status ? 'bg-[#1a3a3a] text-[#0ecb81]' : 'bg-[#3a1a1a] text-[#f6465d]'}`}>
+                                    <tr key={p.id} className="hover:bg-[#141822]/60 transition">
+                                        <td className="py-3 px-4">
+                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#f0b90b]/10 text-[#f0b90b]">
+                                                {p.coin_symbol}
+                                            </span>
+                                        </td>
+                                        <td className="py-3 px-4 text-white font-semibold text-xs">{p.name}</td>
+                                        <td className="py-3 px-4 text-white text-xs text-right">{p.plan} months</td>
+                                        <td className="py-3 px-4 text-[#0ecb81] text-xs text-right font-bold">{p.percentage}%</td>
+                                        <td className="py-3 px-4 text-center">
+                                            <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${p.status ? 'bg-[#0ecb81]/10 text-[#0ecb81]' : 'bg-[#f6465d]/10 text-[#f6465d]'}`}>
                                                 {p.status ? 'Active' : 'Inactive'}
                                             </span>
                                         </td>
-                                        <td className="py-3 px-3 text-right space-x-1">
+                                        <td className="py-3 px-4 text-right space-x-2">
                                             <button
                                                 onClick={() => handleToggleStatus(p.id, p.status)}
-                                                className="text-[10px] bg-transparent border border-[#2b3548] text-[#848e9c] px-2 py-1 rounded hover:border-[#f0b90b] hover:text-[#f0b90b] cursor-pointer"
+                                                className="text-[10px] border border-[#2b3548] text-[#848e9c] px-2.5 py-1 rounded-lg hover:border-[#f0b90b] hover:text-[#f0b90b] cursor-pointer transition"
                                             >
                                                 {p.status ? 'Deactivate' : 'Activate'}
                                             </button>
                                             <button
                                                 onClick={() => handleDelete(p.id)}
-                                                className="text-[10px] bg-transparent border border-[#f6465d] text-[#f6465d] px-2 py-1 rounded hover:bg-[#f6465d]/10 cursor-pointer"
+                                                className="text-[10px] border border-[#f6465d]/50 text-[#f6465d] px-2.5 py-1 rounded-lg hover:bg-[#f6465d]/10 cursor-pointer transition"
                                             >
                                                 Delete
                                             </button>
@@ -222,53 +210,60 @@ export default function AdminStakingPanel({ plans, allStakes, onRefresh }) {
                 </div>
             )}
 
+            {/* All Stakes Tab */}
             {tab === 'stakes' && (
                 <div>
                     <div className="grid grid-cols-3 gap-4 mb-6">
-                        <div className="bg-[#141822] border border-[#1e2433] rounded-lg p-4">
+                        <div className="bg-[#0f1117] border border-[#1e2433] rounded-xl p-4">
                             <p className="text-[#848e9c] text-[10px] uppercase tracking-wider">Total Staked</p>
-                            <p className="text-white font-bold text-lg mt-1">{formatINR(totalStaked)}</p>
+                            <p className="text-white font-bold text-lg mt-1">{totalStaked.toFixed(4)}</p>
                         </div>
-                        <div className="bg-[#141822] border border-[#1e2433] rounded-lg p-4">
+                        <div className="bg-[#0f1117] border border-[#1e2433] rounded-xl p-4">
                             <p className="text-[#848e9c] text-[10px] uppercase tracking-wider">Active</p>
                             <p className="text-[#0ecb81] font-bold text-lg mt-1">{activeStakes.length}</p>
                         </div>
-                        <div className="bg-[#141822] border border-[#1e2433] rounded-lg p-4">
+                        <div className="bg-[#0f1117] border border-[#1e2433] rounded-xl p-4">
                             <p className="text-[#848e9c] text-[10px] uppercase tracking-wider">Matured</p>
                             <p className="text-[#f0b90b] font-bold text-lg mt-1">{maturedStakes.length}</p>
                         </div>
                     </div>
 
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto rounded-xl border border-[#1e2433]">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="text-[#848e9c] text-[10px] uppercase tracking-wider border-b border-[#1e2433]">
-                                    <th className="text-left py-3 px-3 font-semibold">User</th>
-                                    <th className="text-left py-3 px-3 font-semibold">Plan</th>
-                                    <th className="text-right py-3 px-3 font-semibold">Staked</th>
-                                    <th className="text-right py-3 px-3 font-semibold">Reward</th>
-                                    <th className="text-right py-3 px-3 font-semibold">Start</th>
-                                    <th className="text-right py-3 px-3 font-semibold">Maturity</th>
-                                    <th className="text-center py-3 px-3 font-semibold">Status</th>
+                                <tr className="bg-[#0f1117] text-[#848e9c] text-[10px] uppercase tracking-wider border-b border-[#1e2433]">
+                                    <th className="text-left py-3 px-4 font-semibold">User</th>
+                                    <th className="text-left py-3 px-4 font-semibold">Plan</th>
+                                    <th className="text-left py-3 px-4 font-semibold">Coin</th>
+                                    <th className="text-right py-3 px-4 font-semibold">Staked</th>
+                                    <th className="text-right py-3 px-4 font-semibold">Reward</th>
+                                    <th className="text-right py-3 px-4 font-semibold">Maturity</th>
+                                    <th className="text-center py-3 px-4 font-semibold">Status</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody className="divide-y divide-[#1e2433]/50">
                                 {allStakes.map(s => (
-                                    <tr key={s.id} className="border-b border-[#1e2433]/50 hover:bg-[#1e2433]/30">
-                                        <td className="py-3 px-3">
+                                    <tr key={s.id} className="hover:bg-[#141822]/60 transition">
+                                        <td className="py-3 px-4">
                                             <div className="text-white font-semibold text-xs">{s.first_name || s.user_id}</div>
                                             <div className="text-[#848e9c] text-[10px]">{s.email || ''}</div>
                                         </td>
-                                        <td className="py-3 px-3 text-white text-xs">{s.plan_name}</td>
-                                        <td className="py-3 px-3 text-white text-xs text-right">{formatINR(s.stake_amount)}</td>
-                                        <td className="py-3 px-3 text-[#f0b90b] text-xs text-right">{formatINR(s.reward_amount || 0)}</td>
-                                        <td className="py-3 px-3 text-[#848e9c] text-xs text-right">
-                                            {new Date(s.start_date).toLocaleDateString()}
+                                        <td className="py-3 px-4 text-white text-xs">{s.plan_name}</td>
+                                        <td className="py-3 px-4">
+                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#f0b90b]/10 text-[#f0b90b]">
+                                                {s.coin_symbol}
+                                            </span>
                                         </td>
-                                        <td className="py-3 px-3 text-[#848e9c] text-xs text-right">
+                                        <td className="py-3 px-4 text-white text-xs text-right font-semibold">
+                                            {parseFloat(s.stake_amount).toFixed(4)}
+                                        </td>
+                                        <td className="py-3 px-4 text-[#f0b90b] text-xs text-right">
+                                            +{parseFloat(s.reward_amount || 0).toFixed(4)}
+                                        </td>
+                                        <td className="py-3 px-4 text-[#848e9c] text-xs text-right">
                                             {s.maturity_date ? new Date(s.maturity_date).toLocaleDateString() : '-'}
                                         </td>
-                                        <td className="py-3 px-3 text-center">
+                                        <td className="py-3 px-4 text-center">
                                             <StatusBadge status={s.status} />
                                         </td>
                                     </tr>

@@ -161,36 +161,13 @@ async function ensureStakingSchema() {
         const [netCount] = await conn.query('SELECT COUNT(*) AS cnt FROM dbt_coin_network');
         console.log(`[autoMigrate] dbt_coin_network has ${netCount[0].cnt} rows`);
 
+        // Drop legacy staking tables — we now use the `staking` and `staking_log` tables exclusively
         try {
-            await conn.query(`DROP TABLE IF EXISTS dbt_staking_plan`);
-            console.log('[autoMigrate] Dropped duplicate table dbt_staking_plan');
+            await conn.query('DROP TABLE IF EXISTS dbt_user_staking');
+            await conn.query('DROP TABLE IF EXISTS dbt_staking_plans');
+            console.log('[autoMigrate] Removed legacy dbt_staking_plans and dbt_user_staking tables');
         } catch (_) {}
 
-        await conn.query(`
-            CREATE TABLE IF NOT EXISTS dbt_staking_plans (
-                id int(11) NOT NULL AUTO_INCREMENT,
-                name varchar(100) NOT NULL,
-                min_amount decimal(20,8) NOT NULL DEFAULT 0.00000000,
-                max_amount decimal(20,8) NOT NULL DEFAULT 99999999.00000000,
-                duration_days int(11) NOT NULL,
-                apr_percent decimal(10,2) NOT NULL,
-                status tinyint(1) DEFAULT 1,
-                created_at timestamp NOT NULL DEFAULT current_timestamp(),
-                PRIMARY KEY (id)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
-        `);
-
-        const [existingPlans] = await conn.query('SELECT COUNT(*) AS cnt FROM dbt_staking_plans');
-        if (existingPlans[0].cnt === 0) {
-            await conn.query(`
-                INSERT INTO dbt_staking_plans (name, min_amount, max_amount, duration_days, apr_percent, status) VALUES
-                ('Flexi Saver',    100.00000000, 99999999.00000000,  7,  6.00, 1),
-                ('Value Booster',  500.00000000, 99999999.00000000, 14,  8.50, 1),
-                ('Growth Pro',    1000.00000000, 99999999.00000000, 30, 12.00, 1),
-                ('Wealth Builder', 5000.00000000, 99999999.00000000, 60, 15.00, 1)
-            `);
-            console.log('[autoMigrate] Seeded default staking plans');
-        }
 
         const withdrawCols = [
             ['charge', 'decimal(20,8) DEFAULT 0.00000000'],
