@@ -168,7 +168,7 @@ export default function RegisterPage() {
         {/* Logo Section */}
         <div className="text-center mb-8">
           <img src={logo} alt="NiveshBay" className="mx-auto max-h-16 object-contain" />
-          <p className="text-gray-400 mt-2 text-sm">Create your free account — start with ₹2,00,000 virtual balance</p>
+          <p className="text-gray-400 mt-2 text-sm">Create your free account — start with $2,000 virtual balance</p>
         </div>
 
         {/* Card Box */}
@@ -384,7 +384,7 @@ export default function RegisterPage() {
               className="w-full bg-green-500 hover:bg-green-400 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition text-sm shadow-lg flex items-center justify-center gap-2"
             >
               {submitting && <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />}
-              {submitting ? 'Creating account…' : 'Create Account — Get ₹2,00,000 Free'}
+              {submitting ? 'Creating account…' : 'Create Account — Get $2,000 Free'}
             </button>
           </form>
 

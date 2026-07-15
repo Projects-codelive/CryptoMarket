@@ -106,7 +106,7 @@ export default function PriceHeader({ symbol }) {
       </span>
       <span className="text-[#848e9c]">24h High: <span className="text-white">{displayHigh ? formatCurrency(displayHigh, quoteSymbol) : '--'}</span></span>
       <span className="text-[#848e9c]">24h Low: <span className="text-white">{displayLow ? formatCurrency(displayLow, quoteSymbol) : '--'}</span></span>
-      <span className="text-[#848e9c]">24h Vol: <span className="text-white">{displayVol ? Number(displayVol).toLocaleString('en-IN') : '0'}</span></span>
+      <span className="text-[#848e9c]">24h Vol: <span className="text-white">{displayVol ? Number(displayVol).toLocaleString('en-US') : '0'}</span></span>
     </div>
   );
 }

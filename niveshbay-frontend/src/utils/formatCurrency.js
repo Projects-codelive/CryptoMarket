@@ -1,15 +1,18 @@
+// formatCurrency.js — All prices are now displayed in USDT ($)
+// formatINR is kept as an alias so existing imports don't break, but outputs $ now
+
 export function formatINR(amount) {
-  return '\u20B9' + Number(amount).toLocaleString('en-IN', {
+  return '$' + Number(amount || 0).toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
 }
 
 export function formatINRShort(amount) {
-  if (amount >= 10000000) return '\u20B9' + (amount / 10000000).toFixed(2) + 'Cr';
-  if (amount >= 100000) return '\u20B9' + (amount / 100000).toFixed(2) + 'L';
-  if (amount >= 1000) return '\u20B9' + (amount / 1000).toFixed(2) + 'K';
-  return formatINR(amount);
+  const n = Number(amount || 0);
+  if (n >= 1000000) return '$' + (n / 1000000).toFixed(2) + 'M';
+  if (n >= 1000)    return '$' + (n / 1000).toFixed(2) + 'K';
+  return formatINR(n);
 }
 
 export function formatPrice(price, decimals = 2) {
@@ -20,22 +23,17 @@ export function formatAmount(amount, decimals = 4) {
   return Number(amount).toFixed(decimals);
 }
 
-export function formatCurrency(amount, quoteSymbol = 'INR') {
-  if (!quoteSymbol || quoteSymbol.toUpperCase() === 'INR') {
-    return '\u20B9' + Number(amount || 0).toLocaleString('en-IN', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-  } else if (quoteSymbol.toUpperCase() === 'USDT') {
+export function formatCurrency(amount, quoteSymbol = 'USDT') {
+  const sym = (quoteSymbol || 'USDT').toUpperCase();
+  if (sym === 'USDT' || sym === 'INR') {
+    // Both INR and USDT now display as $ (USDT-denominated)
     return '$' + Number(amount || 0).toLocaleString('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     });
-  } else {
-    return Number(amount || 0).toLocaleString('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }) + ' ' + quoteSymbol.toUpperCase();
   }
+  return Number(amount || 0).toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }) + ' ' + sym;
 }
-

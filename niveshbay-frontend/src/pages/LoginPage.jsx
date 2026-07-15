@@ -94,7 +94,7 @@ export default function LoginPage() {
 
         <div className="text-center mb-8">
           <img src={logo} alt="NiveshBay" className="mx-auto max-h-16 object-contain" />
-          <p className="text-gray-400 mt-2 text-sm">Practice trading with ₹2,00,000 virtual money</p>
+          <p className="text-gray-400 mt-2 text-sm">Practice trading with $2,000 virtual money</p>
         </div>
 
         <div className="bg-[#141822] rounded-2xl border border-gray-800 p-8 shadow-2xl">

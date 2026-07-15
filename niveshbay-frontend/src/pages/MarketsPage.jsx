@@ -191,7 +191,7 @@ export default function MarketsPage() {
           <div className="bg-[#141822] border border-[#1e2433] rounded-lg overflow-hidden">
             <div className="grid grid-cols-12 text-xs text-[#848e9c] px-4 py-2.5 border-b border-[#1e2433] font-semibold uppercase tracking-wider">
               <span className="col-span-4">Name</span>
-              <span className="col-span-3 text-right">Price (INR)</span>
+              <span className="col-span-3 text-right">Price (USDT)</span>
               <span className="col-span-2 text-right">24H %</span>
               <span className="col-span-3 text-right">Volume</span>
             </div>

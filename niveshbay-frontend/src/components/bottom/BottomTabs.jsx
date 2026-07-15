@@ -188,16 +188,16 @@ export default function BottomTabs({ symbol }) {
                 <tr className="text-[10px] text-[#848e9c] border-b border-[#1e2433] sticky top-0 bg-[#0d111b]">
                   <th className="text-left px-3 py-1.5 font-semibold">Coin</th>
                   <th className="text-right px-3 py-1.5 font-semibold">Balance</th>
-                  <th className="text-right px-3 py-1.5 font-semibold">Price (INR)</th>
-                  <th className="text-right px-3 py-1.5 font-semibold">Value (INR)</th>
+                  <th className="text-right px-3 py-1.5 font-semibold">Price (USDT)</th>
+                  <th className="text-right px-3 py-1.5 font-semibold">Value (USDT)</th>
                 </tr>
               </thead>
               <tbody>
                 <tr className="border-b border-[#1e2433]/50 hover:bg-[#1e2433]/30">
-                  <td className="px-3 py-2 text-white font-medium">INR</td>
-                  <td className="px-3 py-2 text-right text-white">{formatPriceINR(balance)}</td>
-                  <td className="px-3 py-2 text-right text-white">{formatINR(1)}</td>
-                  <td className="px-3 py-2 text-right text-white">{formatPriceINR(balance)}</td>
+                  <td className="px-3 py-2 text-white font-medium">USDT</td>
+                  <td className="px-3 py-2 text-right text-white">{formatINR(balance)}</td>
+                  <td className="px-3 py-2 text-right text-white">$1.00</td>
+                  <td className="px-3 py-2 text-right text-white">{formatINR(balance)}</td>
                 </tr>
                 {holdings.length === 0 ? (
                   <tr>
@@ -208,8 +208,8 @@ export default function BottomTabs({ symbol }) {
                     <tr key={h.currency_symbol || i} className="border-b border-[#1e2433]/50 hover:bg-[#1e2433]/30">
                       <td className="px-3 py-2 text-white font-medium">{h.currency_symbol}</td>
                       <td className="px-3 py-2 text-right text-white">{formatAmount(h.balance, 4)}</td>
-                      <td className="px-3 py-2 text-right text-white">{formatPriceINR(h.current_price)}</td>
-                      <td className="px-3 py-2 text-right text-white">{formatPriceINR(h.value_inr)}</td>
+                      <td className="px-3 py-2 text-right text-white">{formatINR(h.current_price)}</td>
+                      <td className="px-3 py-2 text-right text-white">{formatINR(h.value_inr)}</td>
                     </tr>
                   ))
                 )}

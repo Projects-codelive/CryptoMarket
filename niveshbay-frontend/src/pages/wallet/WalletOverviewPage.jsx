@@ -64,8 +64,8 @@ export default function WalletOverviewPage() {
             <div>
               <span className="text-[#848e9c] text-xs uppercase tracking-wider">Estimated Total Value</span>
               <div className="text-2xl font-bold mt-1">
-                <span className="text-[#848e9c] text-sm mr-1">INR</span>
-                {totalValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <span className="text-white font-bold mr-1">$</span>
+                {totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
             </div>
             <div className="flex gap-2">
