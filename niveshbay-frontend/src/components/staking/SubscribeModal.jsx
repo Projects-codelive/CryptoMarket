@@ -92,7 +92,7 @@ export default function SubscribeModal({ plan, onClose, onSuccess }) {
                             Available Balance
                         </div>
                         <div className="text-white font-semibold">
-                            {availableBal.toFixed(8)} <span style={{ color: accent }}>{coin}</span>
+                            {availableBal.toFixed(4)} <span style={{ color: accent }}>{coin}</span>
                         </div>
                     </div>
 
@@ -132,13 +132,13 @@ export default function SubscribeModal({ plan, onClose, onSuccess }) {
                         <div className="flex justify-between text-xs">
                             <span className="text-[#848e9c]">Estimated Reward</span>
                             <span className="text-[#0ecb81] font-semibold">
-                                {numAmount > 0 ? `+${estimatedReward.toFixed(8)}` : '—'} {coin}
+                                {numAmount > 0 ? `+${estimatedReward.toFixed(4)}` : '—'} {coin}
                             </span>
                         </div>
                         <div className="border-t pt-2.5 flex justify-between text-sm" style={{ borderColor: accent + '22' }}>
                             <span className="text-[#848e9c] font-semibold">Total at Maturity</span>
                             <span className="text-white font-bold">
-                                {numAmount > 0 ? totalAtMaturity.toFixed(8) : '—'} {coin}
+                                {numAmount > 0 ? totalAtMaturity.toFixed(4) : '—'} {coin}
                             </span>
                         </div>
                     </div>
