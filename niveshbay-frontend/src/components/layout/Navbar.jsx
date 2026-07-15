@@ -21,7 +21,7 @@ export default function Navbar({ balance, portfolioValue, realizedPnl }) {
       {/* Brand Logo */}
       <div className="flex items-center gap-6">
         <Link to="/trade/SOL-INR" className="flex items-center gap-2 shrink-0">
-          <img src="/src/assets/logo3.png" alt="NiveshBay" className="h-8 object-contain" onError={(e) => {
+          <img src="/src/assets/bullionsx-logo.png" alt="BullionsX" className="h-8 object-contain" onError={(e) => {
             e.target.style.display = 'none';
           }} />
           <span className="text-white font-bold text-lg tracking-wider bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent flex items-center gap-1.5">

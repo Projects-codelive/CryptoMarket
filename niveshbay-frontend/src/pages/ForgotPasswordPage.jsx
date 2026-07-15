@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { sendOtp, verifyOtp, resetPassword } from '../api/auth';
 import { validateEmail, validatePassword } from '../utils/validators';
-import logo from '../assets/logo3.png';
+import logo from '../assets/bullionsx-logo.png';
 import toast from 'react-hot-toast';
 
 export default function ForgotPasswordPage() {

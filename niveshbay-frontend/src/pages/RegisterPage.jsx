@@ -9,7 +9,7 @@ import {
   validatePassword,
   getPasswordStrength
 } from '../utils/validators';
-import logo from '../assets/logo3.png';
+import logo from '../assets/bullionsx-logo.png';
 import toast from 'react-hot-toast';
 
 const STRENGTH_LABELS = ['', 'Weak', 'Fair', 'Good', 'Strong'];

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { adminLogin } from '../api/auth';
 import { useAuth } from '../context/AuthContext';
-import logo from '../assets/logo3.png';
+import logo from '../assets/bullionsx-logo.png';
 import toast from 'react-hot-toast';
 
 export default function AdminLoginPage() {

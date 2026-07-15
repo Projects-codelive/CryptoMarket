@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { loginUser, verifyOtp } from '../api/auth';
 import { useAuth } from '../context/AuthContext';
 import { validateEmail } from '../utils/validators';
-import logo from '../assets/logo3.png';
+import logo from '../assets/bullionsx-logo.png';
 import toast from 'react-hot-toast';
 
 export default function LoginPage() {
