@@ -3,7 +3,7 @@ import api from '../api/axiosInstance';
 import { useSocket } from '../context/SocketContext';
 
 export function useOrderBook(symbol) {
-  const normalizedSymbol = symbol ? symbol.replace(/[_/]/g, '-') : 'SOL-INR';
+  const normalizedSymbol = symbol ? symbol.replace(/[_/]/g, '-') : 'SOL-USDT';
   const dbSymbol = normalizedSymbol.replace(/-/g, '_');
   const [bids, setBids] = useState([]);
   const [asks, setAsks] = useState([]);

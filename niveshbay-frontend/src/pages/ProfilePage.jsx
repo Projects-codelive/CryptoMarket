@@ -545,7 +545,7 @@ export default function ProfilePage() {
         <div className="bg-[#161a1e] border border-[#2b2f36] rounded-lg p-8 text-center">
           <p className="text-[#f6465d] text-sm font-semibold">{error}</p>
           <button
-            onClick={() => navigate('/trade/SOL-INR')}
+            onClick={() => navigate('/trade/SOL-USDT')}
             className="mt-4 text-xs text-[#f0b90b] hover:underline cursor-pointer"
           >
             Back to Trading
@@ -563,7 +563,7 @@ export default function ProfilePage() {
 
         {/* Back button — identical to original */}
         <button
-          onClick={() => navigate('/trade/SOL-INR')}
+          onClick={() => navigate('/trade/SOL-USDT')}
           className="flex items-center gap-2 text-[#848e9c] hover:text-white text-xs font-semibold mb-4 transition cursor-pointer"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">

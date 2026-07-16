@@ -23,7 +23,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!authLoading && user) {
-      navigate('/trade/SOL-INR', { replace: true });
+      navigate('/trade/SOL-USDT', { replace: true });
     }
   }, [user, authLoading, navigate]);
 

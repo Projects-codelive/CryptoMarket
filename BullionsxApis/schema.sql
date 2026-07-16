@@ -229,16 +229,16 @@ CREATE TABLE IF NOT EXISTS `dbt_fees` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
--- Seed data: default trading pairs (INR markets)
+-- Seed data: default trading pairs (USDT markets)
 -- --------------------------------------------------------
 INSERT INTO `dbt_coinpair` (`market_symbol`, `coin_symbol`, `status`) VALUES
-('BTC_INR', 'BTC', 1),
-('ETH_INR', 'ETH', 1),
-('SOL_INR', 'SOL', 1),
-('BNB_INR', 'BNB', 1),
-('XRP_INR', 'XRP', 1),
-('DOGE_INR', 'DOGE', 1),
-('ADA_INR', 'ADA', 1)
+('BTC_USDT', 'BTC', 1),
+('ETH_USDT', 'ETH', 1),
+('SOL_USDT', 'SOL', 1),
+('BNB_USDT', 'BNB', 1),
+('XRP_USDT', 'XRP', 1),
+('DOGE_USDT', 'DOGE', 1),
+('ADA_USDT', 'ADA', 1)
 ON DUPLICATE KEY UPDATE `status` = 1;
 
 -- --------------------------------------------------------
@@ -262,9 +262,9 @@ INSERT INTO `dbt_cryptocoin` (`coin_symbol`, `coin_name`, `status`) VALUES
 ON DUPLICATE KEY UPDATE `status` = 1;
 
 -- --------------------------------------------------------
--- Seed data: trading fees (0.10% for both buy and sell in INR)
+-- Seed data: trading fees (0.10% for both buy and sell in USDT)
 -- --------------------------------------------------------
 INSERT INTO `dbt_fees` (`level`, `currency_symbol`, `fees`) VALUES
-('BUY', 'INR', 0.10),
-('SELL', 'INR', 0.10)
+('BUY', 'USDT', 0.10),
+('SELL', 'USDT', 0.10)
 ON DUPLICATE KEY UPDATE `fees` = VALUES(`fees`);

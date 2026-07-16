@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS `dbt_user_staking` (
   `user_id` varchar(100) NOT NULL,
   `plan_id` int(11) NOT NULL,
   `stake_amount` decimal(20,8) NOT NULL,
-  `currency_symbol` varchar(100) NOT NULL DEFAULT 'INR',
+  `currency_symbol` varchar(100) NOT NULL DEFAULT 'USDT',
   `apr_percent` decimal(10,2) NOT NULL COMMENT 'APR snapshot at subscription time',
   `duration_days` int(11) NOT NULL COMMENT 'Duration snapshot at subscription time',
   `start_date` timestamp NOT NULL DEFAULT current_timestamp(),

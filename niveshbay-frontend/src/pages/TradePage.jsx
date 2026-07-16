@@ -16,7 +16,7 @@ import { useAuth } from '../context/AuthContext';
 
 export default function TradePage() {
   const { symbol: paramSymbol } = useParams();
-  const symbol = paramSymbol || 'SOL-INR';
+  const symbol = paramSymbol || 'SOL-USDT';
   const { user } = useAuth();
   const navigate = useNavigate();
   const { balance, orderHistory, refreshBalance, refreshOrderHistory } = usePortfolio();

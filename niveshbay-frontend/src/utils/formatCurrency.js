@@ -25,8 +25,7 @@ export function formatAmount(amount, decimals = 4) {
 
 export function formatCurrency(amount, quoteSymbol = 'USDT') {
   const sym = (quoteSymbol || 'USDT').toUpperCase();
-  if (sym === 'USDT' || sym === 'INR') {
-    // Both INR and USDT now display as $ (USDT-denominated)
+  if (sym === 'USDT') {
     return '$' + Number(amount || 0).toLocaleString('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,

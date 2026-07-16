@@ -11,7 +11,7 @@ export default function Navbar({ balance, portfolioValue, realizedPnl }) {
   function handleSearch(e) {
     e.preventDefault();
     if (search.trim()) {
-      navigate(`/trade/${search.toUpperCase()}-INR`);
+      navigate(`/trade/${search.toUpperCase()}-USDT`);
       setSearch('');
     }
   }
@@ -20,7 +20,7 @@ export default function Navbar({ balance, portfolioValue, realizedPnl }) {
     <nav className="h-16 bg-[#0b0f19] border-b border-[#1e2433] flex items-center px-4 gap-4 shrink-0 justify-between select-none">
       {/* Brand Logo */}
       <div className="flex items-center gap-6">
-        <Link to="/trade/SOL-INR" className="flex items-center gap-2 shrink-0">
+        <Link to="/trade/SOL-USDT" className="flex items-center gap-2 shrink-0">
           <img src="/src/assets/bullionsx-logo.png" alt="BullionsX" className="h-8 object-contain" onError={(e) => {
             e.target.style.display = 'none';
           }} />

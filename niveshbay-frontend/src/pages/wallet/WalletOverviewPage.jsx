@@ -54,7 +54,7 @@ export default function WalletOverviewPage() {
       <Navbar balance={inrBal} portfolioValue={totalPortfolio} realizedPnl={realizedPnl} />
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Back to Trade */}
-        <button onClick={() => navigate('/trade/SOL-INR')} className="flex items-center gap-1 text-[#848e9c] hover:text-white text-xs mb-4 transition">
+        <button onClick={() => navigate('/trade/SOL-USDT')} className="flex items-center gap-1 text-[#848e9c] hover:text-white text-xs mb-4 transition">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
           Back to Trade
         </button>
@@ -69,8 +69,8 @@ export default function WalletOverviewPage() {
               </div>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => navigate('/wallet/deposit/INR')} className="px-4 py-2 bg-[#0ecb81] text-black text-xs font-semibold rounded hover:bg-[#0ecb81]/90 transition">Deposit</button>
-              <button onClick={() => navigate('/wallet/withdraw/INR')} className="px-4 py-2 bg-[#f6465d] text-white text-xs font-semibold rounded hover:bg-[#f6465d]/90 transition">Withdraw</button>
+              <button onClick={() => navigate('/wallet/deposit/USDT')} className="px-4 py-2 bg-[#0ecb81] text-black text-xs font-semibold rounded hover:bg-[#0ecb81]/90 transition">Deposit</button>
+              <button onClick={() => navigate('/wallet/withdraw/USDT')} className="px-4 py-2 bg-[#f6465d] text-white text-xs font-semibold rounded hover:bg-[#f6465d]/90 transition">Withdraw</button>
               <button onClick={() => navigate('/wallet/history')} className="px-4 py-2 border border-[#2b3548] text-[#848e9c] text-xs font-semibold rounded hover:text-white transition">History</button>
             </div>
           </div>

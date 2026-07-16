@@ -17,7 +17,7 @@ export default function TradingPanel({ symbol, currentPrice, sellFormFillData, b
   const [inrBalance, setInrBalance] = useState(0);
 
   const base = activeCoin?.currency_symbol || symbol?.split(/[-_/]/)[0] || 'SOL';
-  const quote = activeCoin?.quote_symbol || symbol?.split(/[-_/]/)[1] || 'INR';
+  const quote = activeCoin?.quote_symbol || symbol?.split(/[-_/]/)[1] || 'USDT';
 
   const loadBalances = useCallback(() => {
     if (!user) return;

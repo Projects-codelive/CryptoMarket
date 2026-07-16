@@ -97,7 +97,7 @@ export default function ProfileUpdatePage() {
     <div className="min-h-screen bg-[#0b0e11] text-white">
       <div className="max-w-2xl mx-auto px-4 py-10">
         <button
-          onClick={() => navigate('/trade/SOL-INR')}
+          onClick={() => navigate('/trade/SOL-USDT')}
           className="flex items-center gap-2 text-[#848e9c] hover:text-white text-xs font-semibold mb-4 transition cursor-pointer"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">

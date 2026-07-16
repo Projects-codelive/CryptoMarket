@@ -5,13 +5,13 @@ export default function CoinSelector({ symbol, onSelect }) {
   const { coins } = useMarketData(symbol);
   const navigate = useNavigate();
 
-  const pair = symbol ? symbol.replace(/[_/]/g, '-') : 'SOL-INR';
+  const pair = symbol ? symbol.replace(/[_/]/g, '-') : 'SOL-USDT';
   const [base, quote] = pair.split('-');
 
   return (
     <div className="flex items-center gap-2 px-3 py-1.5 bg-[#1e2329] rounded cursor-pointer hover:bg-[#2b2f36]"
       onClick={() => {
-        const s = prompt('Enter symbol (e.g. BTC-INR):', pair);
+        const s = prompt('Enter symbol (e.g. BTC-USDT):', pair);
         if (s) navigate(`/trade/${s.toUpperCase()}`);
       }}
     >

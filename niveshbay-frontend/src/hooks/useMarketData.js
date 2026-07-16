@@ -6,13 +6,13 @@ import { useSocket } from '../context/SocketContext';
 const fetcher = (url) => api.get(url).then(r => r.data);
 
 const DEFAULT_COINS = [
-  { market_symbol: 'BTC-INR', name: 'Bitcoin', price: 5380218.77, change_24h: 1.92, high_24h: 5405000, low_24h: 5245600, volume_24h: 124.58 },
-  { market_symbol: 'ETH-INR', name: 'Ethereum', price: 295872.35, change_24h: -3.23, high_24h: 310000, low_24h: 280000, volume_24h: 854.58 },
-  { market_symbol: 'SOL-INR', name: 'Solana', price: 5741.94, change_24h: -0.66, high_24h: 5943.80, low_24h: 5441.08, volume_24h: 3245.87 },
-  { market_symbol: 'XRP-INR', name: 'Ripple', price: 48.47, change_24h: -1.64, high_24h: 50.80, low_24h: 47.39, volume_24h: 184512.90 },
-  { market_symbol: 'DOGE-INR', name: 'Dogecoin', price: 12.04, change_24h: 3.65, high_24h: 12.62, low_24h: 11.45, volume_24h: 9845120.00 },
-  { market_symbol: 'ADA-INR', name: 'Cardano', price: 40.26, change_24h: -3.65, high_24h: 42.50, low_24h: 39.18, volume_24h: 684512.00 },
-  { market_symbol: 'BNB-INR', name: 'Binance Coin', price: 26823.50, change_24h: -1.22, high_24h: 27896.30, low_24h: 25984.20, volume_24h: 8945.20 },
+  { market_symbol: 'BTC-USDT', name: 'Bitcoin', price: 64000, change_24h: 1.92, high_24h: 65000, low_24h: 62500, volume_24h: 124.58 },
+  { market_symbol: 'ETH-USDT', name: 'Ethereum', price: 3500, change_24h: -3.23, high_24h: 3700, low_24h: 3350, volume_24h: 854.58 },
+  { market_symbol: 'SOL-USDT', name: 'Solana', price: 68, change_24h: -0.66, high_24h: 71, low_24h: 65, volume_24h: 3245.87 },
+  { market_symbol: 'XRP-USDT', name: 'Ripple', price: 0.58, change_24h: -1.64, high_24h: 0.61, low_24h: 0.57, volume_24h: 184512.90 },
+  { market_symbol: 'DOGE-USDT', name: 'Dogecoin', price: 0.14, change_24h: 3.65, high_24h: 0.15, low_24h: 0.135, volume_24h: 9845120.00 },
+  { market_symbol: 'ADA-USDT', name: 'Cardano', price: 0.48, change_24h: -3.65, high_24h: 0.51, low_24h: 0.47, volume_24h: 684512.00 },
+  { market_symbol: 'BNB-USDT', name: 'Binance Coin', price: 320, change_24h: -1.22, high_24h: 335, low_24h: 312, volume_24h: 8945.20 },
 ];
 
 export function useMarketData(symbol) {
@@ -36,13 +36,13 @@ export function useMarketData(symbol) {
       let volume_24h = parseFloat(coin.volume_24h || def?.volume_24h || 0);
 
       if (price <= 0) {
-        const inrCounterpart = DEFAULT_COINS.find(c => c.market_symbol === `${coin.currency_symbol}-INR`);
-        if (inrCounterpart) {
-          price = inrCounterpart.price / 83;
-          change_24h = inrCounterpart.change_24h;
-          high_24h = inrCounterpart.high_24h / 83;
-          low_24h = inrCounterpart.low_24h / 83;
-          volume_24h = inrCounterpart.volume_24h;
+        const usdtCounterpart = DEFAULT_COINS.find(c => c.market_symbol === `${coin.currency_symbol}-USDT`);
+        if (usdtCounterpart) {
+          price = usdtCounterpart.price;
+          change_24h = usdtCounterpart.change_24h;
+          high_24h = usdtCounterpart.high_24h;
+          low_24h = usdtCounterpart.low_24h;
+          volume_24h = usdtCounterpart.volume_24h;
         }
       }
 
@@ -69,7 +69,7 @@ export function useMarketData(symbol) {
     return dbCoins;
   }, [data, dbCoins]);
 
-  const normalizedSymbol = symbol ? symbol.replace(/[_/]/g, '-') : 'SOL-INR';
+  const normalizedSymbol = symbol ? symbol.replace(/[_/]/g, '-') : 'SOL-USDT';
   const activeCoin = coins.find(c => c.market_symbol === normalizedSymbol);
 
   const livePrice = prices?.[normalizedSymbol];
@@ -85,7 +85,7 @@ export function useMarketData(symbol) {
 }
 
 export function useCoinHistory(symbol, interval = '1m') {
-  const normalizedSymbol = symbol ? symbol.replace(/[_/]/g, '-') : 'SOL-INR';
+  const normalizedSymbol = symbol ? symbol.replace(/[_/]/g, '-') : 'SOL-USDT';
   const dbSymbol = normalizedSymbol.replace('-', '_');
 
   const { data, error, mutate } = useSWR(
@@ -108,16 +108,16 @@ export function useCoinHistory(symbol, interval = '1m') {
 
 function generateMockHistory(symbol) {
   const baseCoins = {
-    'SOL-INR': 5741.94,
-    'BTC-INR': 5380218.77,
-    'ETH-INR': 295872.35,
-    'XRP-INR': 48.47,
-    'DOGE-INR': 12.04,
-    'ADA-INR': 40.26,
-    'BNB-INR': 26823.50,
+    'SOL-USDT': 68,
+    'BTC-USDT': 64000,
+    'ETH-USDT': 3500,
+    'XRP-USDT': 0.58,
+    'DOGE-USDT': 0.14,
+    'ADA-USDT': 0.48,
+    'BNB-USDT': 320,
   };
 
-  const basePrice = baseCoins[symbol] || 5741.94;
+  const basePrice = baseCoins[symbol] || 68;
   const candleCount = 100;
   const data = [];
   const now = new Date();

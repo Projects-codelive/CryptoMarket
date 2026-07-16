@@ -2,10 +2,10 @@ import { useNavigate } from 'react-router-dom';
 import { formatINR } from '../../utils/formatCurrency';
 
 const TOP_MOVERS = [
-  { symbol: 'BTC-INR', price: 5380218.77, change: 1.58 },
-  { symbol: 'ETH-INR', price: 295872.35, change: 2.16 },
-  { symbol: 'SOL-INR', price: 5741.94, change: -2.43 },
-  { symbol: 'XRP-INR', price: 48.47, change: -2.05 },
+  { symbol: 'BTC-USDT', price: 64000, change: 1.58 },
+  { symbol: 'ETH-USDT', price: 3500, change: 2.16 },
+  { symbol: 'SOL-USDT', price: 68, change: -2.43 },
+  { symbol: 'XRP-USDT', price: 0.58, change: -2.05 },
 ];
 
 export default function TopMovers() {
@@ -23,7 +23,7 @@ export default function TopMovers() {
           >
             <div className="flex items-center gap-2">
               <span className="text-white font-medium">{coin.symbol.split('-')[0]}</span>
-              <span className="text-[#848e9c]">/INR</span>
+              <span className="text-[#848e9c]">/USDT</span>
             </div>
             <div className="text-right">
               <p className="text-white">{formatINR(coin.price)}</p>

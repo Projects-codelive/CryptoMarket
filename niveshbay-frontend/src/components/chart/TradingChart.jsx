@@ -15,7 +15,7 @@ export default function TradingChart({ symbol }) {
   const [chartInterval, setChartInterval] = useState('1m');
   const [activeTab, setActiveTab] = useState('chart');
 
-  const normalizedSymbol = symbol?.replace(/[_/]/g, '-') || 'SOL-INR';
+  const normalizedSymbol = symbol?.replace(/[_/]/g, '-') || 'SOL-USDT';
   const dbSymbol = activeCoin?.symbol_db || (symbol ? symbol.replace('-', '_') : 'SOL_INR');
 
   const refreshChartData = useCallback(async (interval) => {

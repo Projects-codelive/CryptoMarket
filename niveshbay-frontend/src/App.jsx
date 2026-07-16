@@ -60,7 +60,7 @@ function AppRoutes() {
           </AuthGuard>
         }
       />
-      <Route path="/trade" element={<Navigate to="/trade/SOL-INR" replace />} />
+      <Route path="/trade" element={<Navigate to="/trade/SOL-USDT" replace />} />
       <Route
         path="/markets"
         element={
@@ -207,7 +207,7 @@ function AppRoutes() {
       />
 
       {/* ── Fallback ─────────────────────────────────────────────────── */}
-      <Route path="*" element={<Navigate to="/trade/SOL-INR" replace />} />
+      <Route path="*" element={<Navigate to="/trade/SOL-USDT" replace />} />
     </Routes>
   );
 }

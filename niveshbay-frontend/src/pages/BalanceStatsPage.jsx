@@ -167,7 +167,7 @@ export default function BalanceStatsPage() {
       <div className="min-h-screen bg-[#0b0e11] flex items-center justify-center">
         <div className="bg-[#161a1e] border border-[#2b2f36] rounded-lg p-8 text-center">
           <p className="text-[#f6465d] text-sm font-semibold">{error}</p>
-          <button onClick={() => navigate('/trade/SOL-INR')} className="mt-4 text-xs text-[#f0b90b] hover:underline cursor-pointer">
+          <button onClick={() => navigate('/trade/SOL-USDT')} className="mt-4 text-xs text-[#f0b90b] hover:underline cursor-pointer">
             Back to Dashboard
           </button>
         </div>
@@ -188,7 +188,7 @@ export default function BalanceStatsPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => navigate('/trade/SOL-INR')}
+              onClick={() => navigate('/trade/SOL-USDT')}
               className="flex items-center gap-1 text-[#848e9c] hover:text-white text-xs font-semibold transition cursor-pointer"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">

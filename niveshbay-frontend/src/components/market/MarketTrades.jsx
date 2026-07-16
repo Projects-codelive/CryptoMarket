@@ -6,7 +6,7 @@ import api from '../../api/axiosInstance';
 export default function MarketTrades({ symbol }) {
   const [trades, setTrades] = useState([]);
   const { tradeUpdates } = useSocket() || {};
-  const dbSymbol = symbol ? symbol.replace('-', '_') : 'SOL_INR';
+  const dbSymbol = symbol ? symbol.replace('-', '_') : 'SOL_USDT';
   const prevPricesRef = useRef({});
 
   useEffect(() => {
@@ -31,7 +31,7 @@ export default function MarketTrades({ symbol }) {
         const newTrade = {
           price: parseFloat(latestTrade.price),
           amount: parseFloat(latestTrade.qty),
-          total: parseFloat(latestTrade.amount_inr),
+          total: parseFloat(latestTrade.amount_usdt),
           time: new Date(latestTrade.timestamp).toISOString(),
           id: Date.now(),
         };
@@ -43,7 +43,7 @@ export default function MarketTrades({ symbol }) {
   return (
     <div className="px-3">
       <div className="flex text-[10px] text-[#848e9c] py-1 border-b border-[#2b2f36]">
-        <span className="flex-1">Price(INR)</span>
+        <span className="flex-1">Price(USDT)</span>
         <span className="w-16 text-right">Amount</span>
         <span className="w-14 text-right">Time</span>
       </div>

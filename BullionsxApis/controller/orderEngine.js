@@ -44,13 +44,17 @@ async function logBalanceChange(conn, { userId, currencySymbol, transactionType,
   );
 }
 
-async function findBestCounterOrder(conn, marketSymbol, side, limitPrice, orderType) {
+async function findBestCounterOrder(conn, marketSymbol, side, limitPrice, orderType, excludeUserId) {
   if (side === 'BUY') {
     let query = "SELECT id, bid_type, bid_price, bid_qty, bid_qty_available, total_amount, amount_available, currency_symbol, market_symbol, user_id, fees_amount, status FROM dbt_biding WHERE market_symbol = ? AND status = 2 AND bid_type = 'SELL'";
     const params = [marketSymbol];
     if (orderType === 'LIMIT') {
       query += ' AND bid_price <= ?';
       params.push(limitPrice);
+    }
+    if (excludeUserId) {
+      query += ' AND user_id != ?';
+      params.push(excludeUserId);
     }
     query += ' ORDER BY bid_price ASC, open_order ASC LIMIT 1';
     const [rows] = await conn.query(query, params);
@@ -61,6 +65,10 @@ async function findBestCounterOrder(conn, marketSymbol, side, limitPrice, orderT
   if (orderType === 'LIMIT') {
     query += ' AND bid_price >= ?';
     params.push(limitPrice);
+  }
+  if (excludeUserId) {
+    query += ' AND user_id != ?';
+    params.push(excludeUserId);
   }
   query += ' ORDER BY bid_price DESC, open_order ASC LIMIT 1';
   const [rows] = await conn.query(query, params);
@@ -209,7 +217,7 @@ function broadcastMarketTrade(io, marketSymbol, tradeData) {
     market_symbol: marketSymbol,
     price: tradeData.execPrice,
     qty: tradeData.matchQty,
-    amount_inr: tradeData.matchAmount,
+    amount_usdt: tradeData.matchAmount,
     side: tradeData.initiatorSide,
     timestamp: Date.now()
   });
@@ -224,7 +232,8 @@ async function matchAndSettle(conn, newOrder, buyFeesPct, sellFeesPct, quoteSymb
       newOrder.market_symbol,
       newOrder.bid_type,
       newOrder.bid_price,
-      orderType
+      orderType,
+      newOrder.user_id
     );
     if (!counter) break;
 
@@ -402,7 +411,11 @@ exports.placeBuyOrder = async (req, res) => {
 
     const parts = market.split('_');
     const coinSymbol = parts[0];
-    const quoteSymbol = parts[1] || 'INR';
+    const quoteSymbol = parts[1] || 'USDT';
+
+    if (quoteSymbol === 'INR') {
+      return res.json({ status: 0, message: 'INR markets are no longer supported. Use USDT.' });
+    }
 
     const pool = await connect();
     conn = await pool.getConnection();
@@ -445,14 +458,14 @@ exports.placeBuyOrder = async (req, res) => {
       totalAmount = finalRate * qty;
     }
 
-    const feesAmount = calcFee(qty, finalRate, buyFeesPct);
-    const totalDebit = totalAmount + feesAmount;
+    const feesAmount = parseFloat(((totalAmount * buyFeesPct) / 100).toFixed(8));
+    const totalDebit = parseFloat((totalAmount + feesAmount).toFixed(8));
 
     const buyerBal = await getBalance(conn, userId, quoteSymbol);
     if (parseFloat(buyerBal.balance || 0) < totalDebit) {
       await conn.rollback();
       conn.release();
-      return res.json({ status: 2, message: 'Insufficient INR balance.' });
+      return res.json({ status: 2, message: 'Insufficient balance.' });
     }
 
     await adjustBalance(conn, userId, quoteSymbol, -totalDebit);
@@ -488,14 +501,17 @@ exports.placeBuyOrder = async (req, res) => {
     let autoCancelled = false;
     if (orderType === 'MARKET') {
       const [checkOrder] = await conn.query(
-        'SELECT bid_qty_available, amount_available, status FROM dbt_biding WHERE id = ?',
+        'SELECT bid_qty, bid_qty_available, amount_available, fees_amount, status FROM dbt_biding WHERE id = ?',
         [newOrder.id]
       );
       if (checkOrder[0]?.status === 2 && parseFloat(checkOrder[0]?.bid_qty_available || 0) > 0.000000001) {
         const qtyLeft = parseFloat(checkOrder[0].bid_qty_available);
         const remainingAmt = parseFloat(checkOrder[0].amount_available || 0);
+        const totalOrderQty = parseFloat(checkOrder[0].bid_qty || qty);
+        const totalFee = parseFloat(checkOrder[0].fees_amount || 0);
+        const proportionalFee = totalOrderQty > 0 ? parseFloat(((qtyLeft / totalOrderQty) * totalFee).toFixed(8)) : 0;
+        const refundAmount = parseFloat((remainingAmt + proportionalFee).toFixed(8));
         await conn.query('UPDATE dbt_biding SET status = 3 WHERE id = ?', [newOrder.id]);
-        const refundAmount = remainingAmt + calcFee(qtyLeft, finalRate, buyFeesPct);
         await adjustBalance(conn, userId, quoteSymbol, +refundAmount);
         await logBalanceChange(conn, {
           userId,
@@ -554,7 +570,11 @@ exports.placeSellOrder = async (req, res) => {
 
     const parts = market.split('_');
     const coinSymbol = parts[0];
-    const quoteSymbol = parts[1] || 'INR';
+    const quoteSymbol = parts[1] || 'USDT';
+
+    if (quoteSymbol === 'INR') {
+      return res.json({ status: 0, message: 'INR markets are no longer supported. Use USDT.' });
+    }
 
     const pool = await connect();
     conn = await pool.getConnection();
@@ -707,17 +727,18 @@ exports.cancelOrder = async (req, res) => {
     const order = orderRows[0];
     const parts = order.market_symbol.split('_');
     const coinSymbol = parts[0];
-    const quoteSymbol = parts[1] || 'INR';
+    const quoteSymbol = parts[1] || 'USDT';
 
     await conn.query('UPDATE dbt_biding SET status = 3 WHERE id = ?', [order.id]);
 
     if (order.bid_type === 'BUY') {
       const refundQty = parseFloat(order.bid_qty_available);
       const refundPrice = parseFloat(order.bid_price);
-      const feePct = await getFeePercent(conn, 'BUY', quoteSymbol);
-      const baseRefund = refundQty * refundPrice;
-      const feeRefund = calcFee(refundQty, refundPrice, feePct);
-      const totalRefund = baseRefund + feeRefund;
+      const totalOrderQty = parseFloat(order.bid_qty || order.bid_qty_available);
+      const totalFee = parseFloat(order.fees_amount || 0);
+      const baseRefund = parseFloat((refundQty * refundPrice).toFixed(8));
+      const proportionalFee = totalOrderQty > 0 ? parseFloat(((refundQty / totalOrderQty) * totalFee).toFixed(8)) : 0;
+      const totalRefund = parseFloat((baseRefund + proportionalFee).toFixed(8));
 
       if (totalRefund > 0.000000001) {
         await adjustBalance(conn, userId, quoteSymbol, +totalRefund);

@@ -52,7 +52,7 @@ export default function RegisterPage() {
 
   useEffect(() => {
     if (!authLoading && user) {
-      navigate('/trade/SOL-INR', { replace: true });
+      navigate('/trade/SOL-USDT', { replace: true });
     }
   }, [user, authLoading, navigate]);
 
@@ -149,7 +149,7 @@ export default function RegisterPage() {
       if (res.token) {
         login(res.token, { email: form.email, ...res.user });
         toast.success('Account created successfully!');
-        navigate('/trade/SOL-INR');
+        navigate('/trade/SOL-USDT');
       }
     } catch (err) {
       const msg = err?.response?.data?.message || err?.response?.data?.error || 'Registration failed. Please try again.';

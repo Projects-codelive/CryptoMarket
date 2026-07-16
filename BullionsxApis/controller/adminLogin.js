@@ -73,17 +73,17 @@ exports.adminLogin = async (req, res) => {
             );
 
             await conn.query(
-                "INSERT INTO dbt_balance (user_id, currency_symbol, balance) VALUES (?, 'INR', 200000.00000000)",
+                "INSERT INTO dbt_balance (user_id, currency_symbol, balance) VALUES (?, 'USDT', 200000.00000000)",
                 [user_id]
             );
 
             const [balanceRows] = await conn.query(
-                "SELECT id FROM dbt_balance WHERE user_id = ? AND currency_symbol = 'INR'",
+                "SELECT id FROM dbt_balance WHERE user_id = ? AND currency_symbol = 'USDT'",
                 [user_id]
             );
             if (balanceRows.length) {
                 await conn.query(
-                    "INSERT INTO dbt_balance_log (balance_id, user_id, currency_symbol, transaction_type, transaction_amount, ip, date) VALUES (?, ?, 'INR', 'ADMIN_BONUS', 200000, ?, NOW())",
+                    "INSERT INTO dbt_balance_log (balance_id, user_id, currency_symbol, transaction_type, transaction_amount, ip, date) VALUES (?, ?, 'USDT', 'ADMIN_BONUS', 200000, ?, NOW())",
                     [balanceRows[0].id, user_id, req.ip || '0.0.0.0']
                 );
             }

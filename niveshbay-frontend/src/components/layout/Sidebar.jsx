@@ -8,7 +8,7 @@ import api from '../../api/axiosInstance';
 
 export default function Sidebar({ symbol: propSymbol }) {
   const params = useParams();
-  const activeSymbol = propSymbol || params.symbol || 'SOL-INR';
+  const activeSymbol = propSymbol || params.symbol || 'SOL-USDT';
   const navigate = useNavigate();
   const { user } = useAuth();
   const { coins, activeCoin } = useMarketData(activeSymbol);
@@ -22,7 +22,7 @@ export default function Sidebar({ symbol: propSymbol }) {
   const [moverTab, setMoverTab] = useState('all');
 
   const base = activeCoin?.currency_symbol || activeSymbol?.split(/[-_/]/)[0] || 'SOL';
-  const quote = activeCoin?.quote_symbol || activeSymbol?.split(/[-_/]/)[1] || 'INR';
+  const quote = activeCoin?.quote_symbol || activeSymbol?.split(/[-_/]/)[1] || 'USDT';
   const dbSymbol = activeCoin?.symbol_db || activeSymbol.replace('-', '_');
 
   // Normalize active symbol comparison
@@ -119,11 +119,11 @@ export default function Sidebar({ symbol: propSymbol }) {
 
   // Top Movers data matching screenshots
   const topMovers = [
-    { symbol: 'BTC/INR', priceINR: 5380218.77, change: 5.82 },
-    { symbol: 'XRP/INR', priceINR: 48.47, change: -3.45 },
-    { symbol: 'SOL/INR', priceINR: 5741.94, change: 8.21 },
-    { symbol: 'DOGE/INR', priceINR: 12.04, change: -2.18 },
-    { symbol: 'ADA/INR', priceINR: 40.26, change: -1.05 }
+    { symbol: 'BTC/USDT', priceUSDT: 64000, change: 5.82 },
+    { symbol: 'XRP/USDT', priceUSDT: 0.58, change: -3.45 },
+    { symbol: 'SOL/USDT', priceUSDT: 68, change: 8.21 },
+    { symbol: 'DOGE/USDT', priceUSDT: 0.14, change: -2.18 },
+    { symbol: 'ADA/USDT', priceUSDT: 0.48, change: -1.05 }
   ];
 
   return (
@@ -301,7 +301,7 @@ export default function Sidebar({ symbol: propSymbol }) {
         <div className="space-y-2">
           {topMovers.map(coin => {
             const isPositive = coin.change >= 0;
-            const priceVal = coin.priceINR;
+            const priceVal = coin.priceUSDT;
             const [coinBase, coinQuote] = coin.symbol.split('/');
             return (
               <div

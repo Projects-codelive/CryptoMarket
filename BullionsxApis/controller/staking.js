@@ -5,8 +5,6 @@ const { ensureBalanceRow, InsufficientBalanceError } = require('../services/bala
 
 // Helper to get coin price at time of subscription
 async function getCoinPrice(conn, symbol) {
-    if (symbol === 'INR') return 1.0;
-    
     // Check in coinhistory
     try {
         const [rows] = await conn.query(
@@ -36,6 +34,7 @@ async function getCoinPrice(conn, symbol) {
         'BNB': 580,
         'SOL': 140,
         'XRP': 0.5,
+        'USDT': 1.0,
         'MDR': 0.031714
     };
     return defaults[symbol.toUpperCase()] || 1.0;
@@ -128,7 +127,7 @@ exports.subscribe = async (req, res) => {
         }
         const plan = plans[0];
 
-        const coinSymbol = plan.coin_symbol || 'INR';
+        const coinSymbol = plan.coin_symbol || 'USDT';
         const stakingRow = await ensureBalanceRow(conn, userId, coinSymbol);
         const spotBal = parseFloat(stakingRow.balance || 0);
         if (spotBal < amount) {
@@ -209,7 +208,7 @@ exports.unsubscribe = async (req, res) => {
         const stake = stakes[0];
 
         const refundAmount = parseFloat(stake.amount);
-        const coinSymbol = stake.coin || 'INR';
+        const coinSymbol = stake.coin || 'USDT';
 
         const unstakeRow = await ensureBalanceRow(conn, userId, coinSymbol);
         await conn.query(
@@ -285,7 +284,7 @@ exports.claim = async (req, res) => {
         const durationMonths = parseInt(plan.plan) || 12;
         const reward = principal * (parseFloat(plan.percentage) / 100) * durationMonths;
         const totalCredit = principal + reward;
-        const coinSymbol = stake.coin || 'INR';
+        const coinSymbol = stake.coin || 'USDT';
 
         const claimRow = await ensureBalanceRow(conn, userId, coinSymbol);
         await conn.query(

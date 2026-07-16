@@ -171,23 +171,6 @@ exports.getPortfolio = asyncMiddleware(async (req, res) => {
             priceMap[row.market_symbol] = parseFloat(row.last_price || 0);
         }
 
-        let usdtInrRate = 83.0;
-        if (priceMap['USDT_INR'] && priceMap['USDT_INR'] > 0) {
-            usdtInrRate = priceMap['USDT_INR'];
-        } else if (priceMap['INR_USDT'] && priceMap['INR_USDT'] > 0) {
-            usdtInrRate = 1.0 / priceMap['INR_USDT'];
-        }
-
-        const DEFAULT_COINS = [
-          { market_symbol: 'BTC-INR', price: 5380218.77 },
-          { market_symbol: 'ETH-INR', price: 295872.35 },
-          { market_symbol: 'SOL-INR', price: 5741.94 },
-          { market_symbol: 'XRP-INR', price: 48.47 },
-          { market_symbol: 'DOGE-INR', price: 12.04 },
-          { market_symbol: 'ADA-INR', price: 40.26 },
-          { market_symbol: 'BNB-INR', price: 26823.50 },
-        ];
-
         let totalValueUsdt = 0;
         const holdings = [];
 
@@ -202,25 +185,11 @@ exports.getPortfolio = asyncMiddleware(async (req, res) => {
             if (symbol === 'USDT') {
                 valueUsdt = balance;
                 currentPriceUsdt = 1.0;
-            } else if (symbol === 'INR') {
-                valueUsdt = balance / usdtInrRate;
-                currentPriceUsdt = 1.0 / usdtInrRate;
             } else {
                 const usdtPair = `${symbol}_USDT`;
-                const inrPair = `${symbol}_INR`;
                 if (priceMap[usdtPair] !== undefined) {
                     currentPriceUsdt = priceMap[usdtPair];
                     valueUsdt = balance * currentPriceUsdt;
-                } else if (priceMap[inrPair] !== undefined) {
-                    const priceInr = priceMap[inrPair];
-                    currentPriceUsdt = priceInr / usdtInrRate;
-                    valueUsdt = balance * currentPriceUsdt;
-                } else {
-                    const counterpart = DEFAULT_COINS.find(c => c.market_symbol === `${symbol}-INR`);
-                    if (counterpart) {
-                        currentPriceUsdt = counterpart.price / usdtInrRate;
-                        valueUsdt = balance * currentPriceUsdt;
-                    }
                 }
             }
 
@@ -245,14 +214,10 @@ exports.getPortfolio = asyncMiddleware(async (req, res) => {
         let totalFeesPaidUsdt = 0;
         for (const row of feeRows) {
             const fees = parseFloat(row.fees || 0);
-            if (row.currency_symbol.toUpperCase() === 'USDT') {
-                totalFeesPaidUsdt += fees;
-            } else {
-                totalFeesPaidUsdt += fees / usdtInrRate;
-            }
+            totalFeesPaidUsdt += fees;
         }
 
-        const starterBalanceUsdt = 200000 / usdtInrRate;
+        const starterBalanceUsdt = 200000;
         const unrealisedPnlUsdt = totalValueUsdt - starterBalanceUsdt;
         const pnlPercent = starterBalanceUsdt > 0 ? (unrealisedPnlUsdt / starterBalanceUsdt * 100).toFixed(2) : '0.00';
 
@@ -417,7 +382,7 @@ exports.getHoldingsDetailed = asyncMiddleware(async (req, res) => {
 
     const [balances] = await conn.query(
         `SELECT currency_symbol, SUM(balance) as balance FROM dbt_balance
-         WHERE user_id = ? AND currency_symbol != 'INR'
+         WHERE user_id = ?
          GROUP BY currency_symbol
          HAVING SUM(balance) > 0`,
         [user_id]
@@ -438,13 +403,13 @@ exports.getHoldingsDetailed = asyncMiddleware(async (req, res) => {
     for (const p of prices) priceMap[p.coin_symbol] = parseFloat(p.last_price);
 
     const holdings = balances.map(b => {
-        const price    = b.currency_symbol === 'INR' ? 1 : (priceMap[b.currency_symbol] || 0);
-        const valueINR = parseFloat(b.balance) * price;
+        const price    = b.currency_symbol === 'USDT' ? 1 : (priceMap[b.currency_symbol] || 0);
+        const valueUsdt = parseFloat(b.balance) * price;
         return {
             currency_symbol : b.currency_symbol,
             balance         : parseFloat(b.balance),
             current_price   : price,
-            value_inr       : parseFloat(valueINR.toFixed(2))
+            value_usdt      : parseFloat(valueUsdt.toFixed(2))
         };
     });
 
@@ -690,7 +655,7 @@ exports.getRealizedPnl = asyncMiddleware(async (req, res) => {
           SUM(fees_amount), 0
         ) AS realized_pnl
         FROM dbt_biding_log
-        WHERE user_id = ?`,
+        WHERE user_id = ? AND market_symbol LIKE '%_USDT'`,
         [user_id]
     );
 

@@ -79,7 +79,7 @@ export default function ShareWalletPage() {
 
         {/* Back to Trade */}
         <button
-          onClick={() => navigate('/trade/SOL-INR')}
+          onClick={() => navigate('/trade/SOL-USDT')}
           className="flex items-center gap-1 text-[#848e9c] hover:text-white text-xs mb-4 transition"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

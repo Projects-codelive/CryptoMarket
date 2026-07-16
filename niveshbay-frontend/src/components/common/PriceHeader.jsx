@@ -10,10 +10,10 @@ export default function PriceHeader({ symbol }) {
   const prevPriceRef = useRef(null);
 
   const currencySymbol = activeCoin?.currency_symbol || symbol?.split(/[-_/]/)[0] || 'SOL';
-  const quoteSymbol = activeCoin?.quote_symbol || symbol?.split(/[-_/]/)[1] || 'INR';
+  const quoteSymbol = activeCoin?.quote_symbol || symbol?.split(/[-_/]/)[1] || 'USDT';
 
   const dbSymbol = activeCoin?.symbol_db || (symbol ? symbol.replace('-', '_') : 'SOL_INR');
-  const normalizedSymbol = symbol?.replace(/[_/]/g, '-') || 'SOL-INR';
+  const normalizedSymbol = symbol?.replace(/[_/]/g, '-') || 'SOL-USDT';
   const livePrice = prices?.[normalizedSymbol];
 
   const [price, setPrice] = useState(0);

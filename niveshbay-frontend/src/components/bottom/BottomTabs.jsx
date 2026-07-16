@@ -103,7 +103,7 @@ export default function BottomTabs({ symbol }) {
                 </thead>
                 <tbody>
                   {openOrders.map((order, i) => {
-                    const orderQuote = order.market_symbol ? order.market_symbol.split(/[-_/]/)[1] : 'INR';
+                    const orderQuote = order.market_symbol ? order.market_symbol.split(/[-_/]/)[1] : 'USDT';
                     const filled = order.bid_qty > 0
                       ? ((order.bid_qty - order.bid_qty_available) / order.bid_qty * 100).toFixed(1)
                       : '0.0';
@@ -153,7 +153,7 @@ export default function BottomTabs({ symbol }) {
                 </thead>
                 <tbody>
                   {orderHistory.map((order, i) => {
-                    const orderQuote = order.market_symbol ? order.market_symbol.split(/[-_/]/)[1] : 'INR';
+                    const orderQuote = order.market_symbol ? order.market_symbol.split(/[-_/]/)[1] : 'USDT';
                     return (
                       <tr key={order.id || i} className="border-b border-[#1e2433]/50 hover:bg-[#1e2433]/30">
                         <td className="px-3 py-2 text-white">{formatDate(order.open_order)}</td>
@@ -238,7 +238,7 @@ export default function BottomTabs({ symbol }) {
                 </thead>
                 <tbody>
                   {cancelledOrders.map((order, i) => {
-                    const orderQuote = order.market_symbol ? order.market_symbol.split(/[-_/]/)[1] : 'INR';
+                    const orderQuote = order.market_symbol ? order.market_symbol.split(/[-_/]/)[1] : 'USDT';
                     const filled = order.bid_qty > 0
                       ? ((order.bid_qty - order.bid_qty_available) / order.bid_qty * 100).toFixed(1)
                       : '0.0';

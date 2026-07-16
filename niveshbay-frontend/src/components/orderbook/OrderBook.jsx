@@ -21,7 +21,7 @@ export default function OrderBook({ symbol, onSellFormFill, onBuyFormFill }) {
   const [tradeDirection, setTradeDirection] = useState('neutral');
 
   const base = activeCoin?.currency_symbol || symbol?.split(/[-_/]/)[0] || 'SOL';
-  const quoteSymbol = activeCoin?.quote_symbol || symbol?.split(/[-_/]/)[1] || 'INR';
+  const quoteSymbol = activeCoin?.quote_symbol || symbol?.split(/[-_/]/)[1] || 'USDT';
   const dbSymbol = activeCoin?.symbol_db || (symbol ? symbol.replace('-', '_') : 'SOL_INR');
 
   useEffect(() => {

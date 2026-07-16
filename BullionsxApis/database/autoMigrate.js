@@ -54,7 +54,7 @@ async function ensureStakingSchema() {
                 user_id varchar(100) NOT NULL,
                 plan_id int(11) NOT NULL,
                 stake_amount decimal(20,8) NOT NULL,
-                currency_symbol varchar(100) NOT NULL DEFAULT 'INR',
+                currency_symbol varchar(100) NOT NULL DEFAULT 'USDT',
                 apr_percent decimal(10,2) NOT NULL,
                 duration_days int(11) NOT NULL,
                 start_date timestamp NOT NULL DEFAULT current_timestamp(),
@@ -72,7 +72,7 @@ async function ensureStakingSchema() {
 
         const stakingCols = [
             ['stake_amount', 'decimal(20,8) NOT NULL'],
-            ['currency_symbol', `varchar(100) NOT NULL DEFAULT 'INR'`],
+            ['currency_symbol', `varchar(100) NOT NULL DEFAULT 'USDT'`],
             ['apr_percent', 'decimal(10,2) NOT NULL'],
             ['duration_days', 'int(11) NOT NULL'],
             ['start_date', 'timestamp NOT NULL DEFAULT current_timestamp()'],
@@ -147,9 +147,6 @@ async function ensureStakingSchema() {
         if (existingNetworks[0].cnt === 0) {
             await conn.query(`
                 INSERT INTO dbt_coin_network (coin_symbol, network_name, min_withdraw, max_withdraw, withdraw_fee, deposit_status, withdraw_status, status) VALUES
-                ('INR', 'IMPS', 100.00000000, 1000000.00000000, 0.00000000, 1, 1, 1),
-                ('INR', 'UPI', 100.00000000, 1000000.00000000, 0.00000000, 1, 1, 1),
-                ('INR', 'NEFT', 100.00000000, 1000000.00000000, 0.00000000, 1, 1, 1),
                 ('BTC', 'BITCOIN', 0.00100000, 1000.00000000, 0.00050000, 1, 1, 1),
                 ('ETH', 'ERC20', 0.01000000, 10000.00000000, 0.00500000, 1, 1, 1),
                 ('USDT', 'ERC20', 10.00000000, 100000.00000000, 5.00000000, 1, 1, 1),
@@ -168,11 +165,10 @@ async function ensureStakingSchema() {
             console.log('[autoMigrate] Removed legacy dbt_staking_plans and dbt_user_staking tables');
         } catch (_) {}
 
-        // Disable INR coin and all INR-based trading pairs — market is USDT only
+        // Disable INR coin — market is USDT only
         try {
-            await conn.query("UPDATE dbt_cryptocoin SET status = 0 WHERE symbol = 'INR'");
-            await conn.query("UPDATE dbt_coinpair SET status = 0 WHERE market_currency = 'INR' OR coin_currency = 'INR'");
-            console.log('[autoMigrate] Disabled INR coin and INR-based coin pairs (USDT-only market)');
+            await conn.query("UPDATE dbt_cryptocoin SET status = 0 WHERE coin_symbol = 'INR'");
+            console.log('[autoMigrate] Disabled INR coin (USDT-only market)');
         } catch (_) {}
 
         const withdrawCols = [
@@ -209,7 +205,7 @@ async function ensureStakingSchema() {
             // Ensure seed user has sufficient balances for seeded orders
             await conn.query(
                 'INSERT INTO dbt_balance (user_id, currency_symbol, balance, sharewallet, fundwallet) VALUES (?, ?, 500000, 0, 0) ON DUPLICATE KEY UPDATE balance = GREATEST(balance, 500000)',
-                [seedUserId, 'INR']
+                [seedUserId, 'USDT']
             );
             await conn.query(
                 'INSERT INTO dbt_balance (user_id, currency_symbol, balance, sharewallet, fundwallet) VALUES (?, ?, 500, 0, 0) ON DUPLICATE KEY UPDATE balance = GREATEST(balance, 500)',
@@ -232,21 +228,21 @@ async function ensureStakingSchema() {
             if (existingOrders[0].cnt === 0) {
                 const now = new Date();
                 const seedOrders = [
-                    // SOL_INR
-                    { key: 'sol_b1',  market: 'SOL_INR', coin: 'SOL', type: 'BUY',  price: 5000,  qty: 10 },
-                    { key: 'sol_b2',  market: 'SOL_INR', coin: 'SOL', type: 'BUY',  price: 4900,  qty: 15 },
-                    { key: 'sol_s1',  market: 'SOL_INR', coin: 'SOL', type: 'SELL', price: 5200,  qty:  8 },
-                    { key: 'sol_s2',  market: 'SOL_INR', coin: 'SOL', type: 'SELL', price: 5300,  qty: 12 },
-                    // BTC_INR
-                    { key: 'btc_b1',  market: 'BTC_INR', coin: 'BTC', type: 'BUY',  price: 5000000, qty: 0.5 },
-                    { key: 'btc_b2',  market: 'BTC_INR', coin: 'BTC', type: 'BUY',  price: 4900000, qty: 1   },
-                    { key: 'btc_s1',  market: 'BTC_INR', coin: 'BTC', type: 'SELL', price: 5200000, qty: 0.3 },
-                    { key: 'btc_s2',  market: 'BTC_INR', coin: 'BTC', type: 'SELL', price: 5300000, qty: 0.7 },
-                    // ETH_INR
-                    { key: 'eth_b1',  market: 'ETH_INR', coin: 'ETH', type: 'BUY',  price: 150000, qty: 2 },
-                    { key: 'eth_b2',  market: 'ETH_INR', coin: 'ETH', type: 'BUY',  price: 145000, qty: 3 },
-                    { key: 'eth_s1',  market: 'ETH_INR', coin: 'ETH', type: 'SELL', price: 160000, qty: 1 },
-                    { key: 'eth_s2',  market: 'ETH_INR', coin: 'ETH', type: 'SELL', price: 165000, qty: 2 },
+                    // SOL_USDT
+                    { key: 'sol_b1',  market: 'SOL_USDT', coin: 'SOL', type: 'BUY',  price: 60,   qty: 10 },
+                    { key: 'sol_b2',  market: 'SOL_USDT', coin: 'SOL', type: 'BUY',  price: 58,   qty: 15 },
+                    { key: 'sol_s1',  market: 'SOL_USDT', coin: 'SOL', type: 'SELL', price: 63,   qty:  8 },
+                    { key: 'sol_s2',  market: 'SOL_USDT', coin: 'SOL', type: 'SELL', price: 65,   qty: 12 },
+                    // BTC_USDT
+                    { key: 'btc_b1',  market: 'BTC_USDT', coin: 'BTC', type: 'BUY',  price: 60000, qty: 0.5 },
+                    { key: 'btc_b2',  market: 'BTC_USDT', coin: 'BTC', type: 'BUY',  price: 59000, qty: 1   },
+                    { key: 'btc_s1',  market: 'BTC_USDT', coin: 'BTC', type: 'SELL', price: 62000, qty: 0.3 },
+                    { key: 'btc_s2',  market: 'BTC_USDT', coin: 'BTC', type: 'SELL', price: 63000, qty: 0.7 },
+                    // ETH_USDT
+                    { key: 'eth_b1',  market: 'ETH_USDT', coin: 'ETH', type: 'BUY',  price: 1800,  qty: 2 },
+                    { key: 'eth_b2',  market: 'ETH_USDT', coin: 'ETH', type: 'BUY',  price: 1750,  qty: 3 },
+                    { key: 'eth_s1',  market: 'ETH_USDT', coin: 'ETH', type: 'SELL', price: 1900,  qty: 1 },
+                    { key: 'eth_s2',  market: 'ETH_USDT', coin: 'ETH', type: 'SELL', price: 1950,  qty: 2 },
                 ];
                 for (const o of seedOrders) {
                     const totalAmount = o.price * o.qty;
@@ -264,19 +260,19 @@ async function ensureStakingSchema() {
                 // Use captured IDs if we just seeded; fall back to 1-based offset otherwise
                 const id = (key) => orderIdMap[key] || (() => { const m = { sol_b1:1,sol_b2:2,sol_s1:3,sol_s2:4,btc_b1:5,btc_b2:6,btc_s1:7,btc_s2:8,eth_b1:9,eth_b2:10,eth_s1:11,eth_s2:12 }; return m[key] || 0; })();
                 const logEntries = [
-                    // SOL_INR
-                    { bid: 'sol_b1', ask: 'sol_s1', market: 'SOL_INR', coin: 'SOL', price: 5100, qty: 2, amt: 10200 },
-                    { bid: 'sol_b1', ask: 'sol_s2', market: 'SOL_INR', coin: 'SOL', price: 5050, qty: 3, amt: 15150 },
-                    { bid: 'sol_b2', ask: 'sol_s1', market: 'SOL_INR', coin: 'SOL', price: 5080, qty: 1, amt: 5080  },
-                    { bid: 'sol_b1', ask: 'sol_s2', market: 'SOL_INR', coin: 'SOL', price: 5120, qty: 2, amt: 10240 },
-                    { bid: 'sol_b2', ask: 'sol_s1', market: 'SOL_INR', coin: 'SOL', price: 5060, qty: 4, amt: 20240 },
-                    // BTC_INR
-                    { bid: 'btc_b1', ask: 'btc_s1', market: 'BTC_INR', coin: 'BTC', price: 5100000, qty: 0.1,  amt: 510000  },
-                    { bid: 'btc_b2', ask: 'btc_s1', market: 'BTC_INR', coin: 'BTC', price: 5050000, qty: 0.2,  amt: 1010000 },
-                    { bid: 'btc_b1', ask: 'btc_s2', market: 'BTC_INR', coin: 'BTC', price: 5150000, qty: 0.15, amt: 772500  },
-                    // ETH_INR
-                    { bid: 'eth_b1', ask: 'eth_s1', market: 'ETH_INR', coin: 'ETH', price: 155000, qty: 1,   amt: 155000 },
-                    { bid: 'eth_b2', ask: 'eth_s2', market: 'ETH_INR', coin: 'ETH', price: 158000, qty: 0.5, amt: 79000  },
+                    // SOL_USDT
+                    { bid: 'sol_b1', ask: 'sol_s1', market: 'SOL_USDT', coin: 'SOL', price: 61,   qty: 2,   amt: 122   },
+                    { bid: 'sol_b1', ask: 'sol_s2', market: 'SOL_USDT', coin: 'SOL', price: 60.5, qty: 3,   amt: 181.5 },
+                    { bid: 'sol_b2', ask: 'sol_s1', market: 'SOL_USDT', coin: 'SOL', price: 60.8, qty: 1,   amt: 60.8  },
+                    { bid: 'sol_b1', ask: 'sol_s2', market: 'SOL_USDT', coin: 'SOL', price: 61.2, qty: 2,   amt: 122.4 },
+                    { bid: 'sol_b2', ask: 'sol_s1', market: 'SOL_USDT', coin: 'SOL', price: 60.6, qty: 4,   amt: 242.4 },
+                    // BTC_USDT
+                    { bid: 'btc_b1', ask: 'btc_s1', market: 'BTC_USDT', coin: 'BTC', price: 61000, qty: 0.1,  amt: 6100  },
+                    { bid: 'btc_b2', ask: 'btc_s1', market: 'BTC_USDT', coin: 'BTC', price: 60500, qty: 0.2,  amt: 12100 },
+                    { bid: 'btc_b1', ask: 'btc_s2', market: 'BTC_USDT', coin: 'BTC', price: 61500, qty: 0.15, amt: 9225  },
+                    // ETH_USDT
+                    { bid: 'eth_b1', ask: 'eth_s1', market: 'ETH_USDT', coin: 'ETH', price: 1850,  qty: 1,   amt: 1850  },
+                    { bid: 'eth_b2', ask: 'eth_s2', market: 'ETH_USDT', coin: 'ETH', price: 1880,  qty: 0.5, amt: 940   },
                 ];
                 for (const l of logEntries) {
                     const t = new Date(now.getTime() - Math.random() * 86400000);

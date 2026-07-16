@@ -15,7 +15,7 @@ exports.getOverview = async (req, res) => {
     const [cryptocoins] = await conn.query('SELECT coin_symbol FROM dbt_cryptocoin WHERE status = 1');
     const [coinpairs] = await conn.query('SELECT currency_symbol, market_symbol FROM dbt_coinpair WHERE status = 1');
 
-    const activeCoinSymbols = new Set(['INR', 'USDT']);
+    const activeCoinSymbols = new Set(['USDT']);
     for (const c of cryptocoins) {
         if (c.coin_symbol) activeCoinSymbols.add(c.coin_symbol.toUpperCase());
     }
@@ -56,13 +56,6 @@ exports.getOverview = async (req, res) => {
         priceMap[row.market_symbol] = parseFloat(row.last_price || 0);
     }
 
-    let usdtInrRate = 83.0;
-    if (priceMap['USDT_INR'] && priceMap['USDT_INR'] > 0) {
-        usdtInrRate = priceMap['USDT_INR'];
-    } else if (priceMap['INR_USDT'] && priceMap['INR_USDT'] > 0) {
-        usdtInrRate = 1.0 / priceMap['INR_USDT'];
-    }
-
     const [openOrders] = await conn.query(
       "SELECT market_symbol, SUM(bid_qty_available) as locked_qty FROM dbt_biding WHERE user_id = ? AND status = 2 GROUP BY market_symbol",
       [userId]
@@ -86,16 +79,6 @@ exports.getOverview = async (req, res) => {
     let totalEstimated = 0;
     const overview = [];
 
-    const DEFAULT_COINS = [
-      { market_symbol: 'BTC-INR', price: 5380218.77 },
-      { market_symbol: 'ETH-INR', price: 295872.35 },
-      { market_symbol: 'SOL-INR', price: 5741.94 },
-      { market_symbol: 'XRP-INR', price: 48.47 },
-      { market_symbol: 'DOGE-INR', price: 12.04 },
-      { market_symbol: 'ADA-INR', price: 40.26 },
-      { market_symbol: 'BNB-INR', price: 26823.50 },
-    ];
-
     coins.forEach(coin => {
       const sym = coin.symbol || coin.coin_symbol;
       if (!sym) return;
@@ -104,20 +87,10 @@ exports.getOverview = async (req, res) => {
       let priceUsdt = 0;
       if (sym === 'USDT') {
           priceUsdt = 1.0;
-      } else if (sym === 'INR') {
-          priceUsdt = 1.0 / usdtInrRate;
       } else {
           const usdtPair = `${sym}_USDT`;
-          const inrPair = `${sym}_INR`;
           if (priceMap[usdtPair] !== undefined) {
               priceUsdt = priceMap[usdtPair];
-          } else if (priceMap[inrPair] !== undefined) {
-              priceUsdt = priceMap[inrPair] / usdtInrRate;
-          } else {
-              const counterpart = DEFAULT_COINS.find(c => c.market_symbol === `${sym}-INR`);
-              if (counterpart) {
-                  priceUsdt = counterpart.price / usdtInrRate;
-              }
           }
       }
 
@@ -150,20 +123,10 @@ exports.getOverview = async (req, res) => {
       let priceUsdt = 0;
       if (b.currency_symbol === 'USDT') {
           priceUsdt = 1.0;
-      } else if (b.currency_symbol === 'INR') {
-          priceUsdt = 1.0 / usdtInrRate;
       } else {
           const usdtPair = `${b.currency_symbol}_USDT`;
-          const inrPair = `${b.currency_symbol}_INR`;
           if (priceMap[usdtPair] !== undefined) {
               priceUsdt = priceMap[usdtPair];
-          } else if (priceMap[inrPair] !== undefined) {
-              priceUsdt = priceMap[inrPair] / usdtInrRate;
-          } else {
-              const counterpart = DEFAULT_COINS.find(c => c.market_symbol === `${b.currency_symbol}-INR`);
-              if (counterpart) {
-                  priceUsdt = counterpart.price / usdtInrRate;
-              }
           }
       }
 
@@ -224,7 +187,7 @@ exports.getCoinDetail = async (req, res) => {
     const [priceRows] = await conn.query(
       'SELECT last_price FROM dbt_coinhistory WHERE coin_symbol = ? ORDER BY id DESC LIMIT 1', [symbol]
     );
-    const price = symbol === 'INR' ? 1 : (priceRows.length ? parseFloat(priceRows[0].last_price) : 0);
+    const price = priceRows.length ? parseFloat(priceRows[0].last_price) : 0;
 
     const [openOrders] = await conn.query(
       "SELECT SUM(bid_qty_available) as locked FROM dbt_biding WHERE user_id = ? AND market_symbol LIKE ? AND status = 2",

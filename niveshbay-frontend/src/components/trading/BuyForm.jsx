@@ -34,7 +34,7 @@ export default function BuyForm({ symbol, currentPrice, balance, user, onOrderPl
   const youPay = totalINR + feeINR;
 
   const coin = base || symbol?.split(/[-_/]/)[0] || 'SOL';
-  const quoteSymbol = quote || symbol?.split(/[-_/]/)[1] || 'INR';
+  const quoteSymbol = quote || symbol?.split(/[-_/]/)[1] || 'USDT';
 
   function handleSlider(pct) {
     setSlider(pct);
