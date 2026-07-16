@@ -12,31 +12,43 @@ async function getFeePercent(conn, level, currencySymbol) {
   return parseFloat(rows[0]?.fees || 0);
 }
 
-async function getBalance(conn, userId, currencySymbol) {
+async function getBalance(conn, userId, currencySymbol, cache = null) {
+  const cacheKey = `${userId}:${currencySymbol}`;
+  if (cache && cache[cacheKey]) {
+    return cache[cacheKey];
+  }
   const [rows] = await conn.query(
     'SELECT id, balance FROM dbt_balance WHERE user_id = ? AND currency_symbol = ?',
     [userId, currencySymbol]
   );
-  return rows[0] || { id: null, balance: 0 };
+  const result = rows[0] || { id: null, balance: 0 };
+  if (cache) {
+    cache[cacheKey] = result;
+  }
+  return result;
 }
 
-async function adjustBalance(conn, userId, currencySymbol, delta) {
-  const existing = await getBalance(conn, userId, currencySymbol);
+async function adjustBalance(conn, userId, currencySymbol, delta, cache = null) {
+  const existing = await getBalance(conn, userId, currencySymbol, cache);
   if (existing.id) {
     await conn.query(
       'UPDATE dbt_balance SET balance = GREATEST(balance + ?, 0) WHERE user_id = ? AND currency_symbol = ?',
       [delta, userId, currencySymbol]
     );
+    existing.balance = Math.max(0, parseFloat(existing.balance || 0) + delta);
   } else {
-    await conn.query(
+    const [res] = await conn.query(
       'INSERT INTO dbt_balance (user_id, currency_symbol, balance) VALUES (?, ?, ?)',
       [userId, currencySymbol, Math.max(0, delta)]
     );
+    if (cache) {
+      cache[`${userId}:${currencySymbol}`] = { id: res.insertId, balance: Math.max(0, delta) };
+    }
   }
 }
 
-async function logBalanceChange(conn, { userId, currencySymbol, transactionType, amount, fees, ip }) {
-  const bal = await getBalance(conn, userId, currencySymbol);
+async function logBalanceChange(conn, { userId, currencySymbol, transactionType, amount, fees, ip }, cache = null) {
+  const bal = await getBalance(conn, userId, currencySymbol, cache);
   if (!bal.id) return;
   await conn.query(
     'INSERT INTO dbt_balance_log (balance_id, user_id, currency_symbol, transaction_type, transaction_amount, transaction_fees, ip, date) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())',
@@ -76,37 +88,38 @@ async function insertTradeLog(conn, logData) {
   );
 }
 
-async function updateCoinHistory(conn, { coinSymbol, marketSymbol, executedPrice, tradeQty }) {
-  const [h1Rows] = await conn.query(
-    'SELECT MAX(bid_price) AS price_high, MIN(bid_price) AS price_low FROM dbt_biding_log WHERE market_symbol = ? AND success_time >= DATE_SUB(NOW(), INTERVAL 1 HOUR)',
+async function updateCoinHistory(conn, { coinSymbol, marketSymbol, executedPrice, tradeQty }, cache = null) {
+  const [statsRows] = await conn.query(
+    `SELECT 
+       MAX(CASE WHEN success_time >= DATE_SUB(NOW(), INTERVAL 1 HOUR) THEN bid_price END) AS price_high_1h,
+       MIN(CASE WHEN success_time >= DATE_SUB(NOW(), INTERVAL 1 HOUR) THEN bid_price END) AS price_low_1h,
+       SUM(CASE WHEN bid_type = 'BUY' AND success_time >= DATE_SUB(NOW(), INTERVAL 1 HOUR) THEN complete_qty ELSE 0 END) AS volume_1h,
+       MAX(bid_price) AS price_high_24h,
+       MIN(bid_price) AS price_low_24h,
+       SUM(CASE WHEN bid_type = 'BUY' THEN complete_qty ELSE 0 END) AS volume_24h
+     FROM dbt_biding_log 
+     WHERE market_symbol = ? AND success_time >= DATE_SUB(NOW(), INTERVAL 24 HOUR)`,
     [marketSymbol]
   );
-  const [h1VolRows] = await conn.query(
-    "SELECT COALESCE(SUM(complete_qty), 0) AS volume FROM dbt_biding_log WHERE bid_type = 'BUY' AND market_symbol = ? AND success_time >= DATE_SUB(NOW(), INTERVAL 1 HOUR)",
-    [marketSymbol]
-  );
+  const stats = statsRows[0] || {};
 
-  const [h24Rows] = await conn.query(
-    'SELECT MAX(bid_price) AS price_high, MIN(bid_price) AS price_low FROM dbt_biding_log WHERE market_symbol = ? AND success_time >= DATE_SUB(NOW(), INTERVAL 24 HOUR)',
-    [marketSymbol]
-  );
-  const [h24VolRows] = await conn.query(
-    "SELECT COALESCE(SUM(complete_qty), 0) AS volume FROM dbt_biding_log WHERE bid_type = 'BUY' AND market_symbol = ? AND success_time >= DATE_SUB(NOW(), INTERVAL 24 HOUR)",
-    [marketSymbol]
-  );
+  const h1High = parseFloat(stats.price_high_1h) || executedPrice;
+  const h1Low = parseFloat(stats.price_low_1h) || executedPrice;
+  const h1Volume = parseFloat(stats.volume_1h) || 0;
+  const h24High = parseFloat(stats.price_high_24h) || executedPrice;
+  const h24Low = parseFloat(stats.price_low_24h) || executedPrice;
+  const h24Volume = parseFloat(stats.volume_24h) || 0;
 
-  const h1High = parseFloat(h1Rows[0]?.price_high) || executedPrice;
-  const h1Low = parseFloat(h1Rows[0]?.price_low) || executedPrice;
-  const h1Volume = parseFloat(h1VolRows[0]?.volume) || 0;
-  const h24High = parseFloat(h24Rows[0]?.price_high) || executedPrice;
-  const h24Low = parseFloat(h24Rows[0]?.price_low) || executedPrice;
-  const h24Volume = parseFloat(h24VolRows[0]?.volume) || 0;
-
-  const [lastPriceRows] = await conn.query(
-    'SELECT last_price FROM dbt_coinhistory WHERE market_symbol = ? ORDER BY id DESC LIMIT 1',
-    [marketSymbol]
-  );
-  const prevClose = parseFloat(lastPriceRows[0]?.last_price) || executedPrice;
+  let prevClose;
+  if (cache && cache.prevClose !== undefined) {
+    prevClose = cache.prevClose;
+  } else {
+    const [lastPriceRows] = await conn.query(
+      'SELECT last_price FROM dbt_coinhistory WHERE market_symbol = ? ORDER BY id DESC LIMIT 1',
+      [marketSymbol]
+    );
+    prevClose = parseFloat(lastPriceRows[0]?.last_price) || executedPrice;
+  }
 
   const priceChange1h = executedPrice >= prevClose ? (h1High - h1Low) : -(h1High - h1Low);
   const priceChange24h = executedPrice >= prevClose ? (h24High - h24Low) : -(h24High - h24Low);
@@ -121,6 +134,10 @@ async function updateCoinHistory(conn, { coinSymbol, marketSymbol, executedPrice
       tradeQty + h24Volume, h24Volume
     ]
   );
+
+  if (cache) {
+    cache.prevClose = executedPrice;
+  }
 }
 
 async function broadcastOrderBook(io, conn, marketSymbol) {
@@ -215,8 +232,9 @@ function broadcastMarketTrade(io, marketSymbol, tradeData) {
   });
 }
 
-async function matchAndSettle(conn, newOrder, buyFeesPct, sellFeesPct, quoteSymbol, coinSymbol, orderType, io, ip) {
+async function matchAndSettle(conn, newOrder, buyFeesPct, sellFeesPct, quoteSymbol, coinSymbol, orderType, io, ip, balanceCache = {}) {
   let remainingQty = parseFloat(newOrder.bid_qty_available);
+  const coinHistoryCache = {};
 
   while (remainingQty > 0.000000001) {
     const counter = await findBestCounterOrder(
@@ -267,7 +285,7 @@ async function matchAndSettle(conn, newOrder, buyFeesPct, sellFeesPct, quoteSymb
       const totalRefund = baseRefund + (feeRefund > 0 ? feeRefund : 0);
 
       if (totalRefund > 0.000000001) {
-        await adjustBalance(conn, buyerOrder.user_id, quoteSymbol, +totalRefund);
+        await adjustBalance(conn, buyerOrder.user_id, quoteSymbol, +totalRefund, balanceCache);
         await logBalanceChange(conn, {
           userId: buyerOrder.user_id,
           currencySymbol: quoteSymbol,
@@ -275,11 +293,11 @@ async function matchAndSettle(conn, newOrder, buyFeesPct, sellFeesPct, quoteSymb
           amount: totalRefund,
           fees: 0,
           ip
-        });
+        }, balanceCache);
       }
     }
 
-    await adjustBalance(conn, buyerOrder.user_id, coinSymbol, +matchQty);
+    await adjustBalance(conn, buyerOrder.user_id, coinSymbol, +matchQty, balanceCache);
     await logBalanceChange(conn, {
       userId: buyerOrder.user_id,
       currencySymbol: coinSymbol,
@@ -287,7 +305,7 @@ async function matchAndSettle(conn, newOrder, buyFeesPct, sellFeesPct, quoteSymb
       amount: matchQty,
       fees: 0,
       ip
-    });
+    }, balanceCache);
     await logBalanceChange(conn, {
       userId: buyerOrder.user_id,
       currencySymbol: quoteSymbol,
@@ -295,11 +313,11 @@ async function matchAndSettle(conn, newOrder, buyFeesPct, sellFeesPct, quoteSymb
       amount: 0,
       fees: buyerFee,
       ip
-    });
+    }, balanceCache);
 
     const sellerReceives = matchAmount - sellerFee;
     if (sellerReceives > 0.000000001) {
-      await adjustBalance(conn, sellerOrder.user_id, quoteSymbol, +sellerReceives);
+      await adjustBalance(conn, sellerOrder.user_id, quoteSymbol, +sellerReceives, balanceCache);
       await logBalanceChange(conn, {
         userId: sellerOrder.user_id,
         currencySymbol: quoteSymbol,
@@ -307,7 +325,7 @@ async function matchAndSettle(conn, newOrder, buyFeesPct, sellFeesPct, quoteSymb
         amount: matchAmount,
         fees: sellerFee,
         ip
-      });
+      }, balanceCache);
     }
 
     const now = new Date();
@@ -355,7 +373,7 @@ async function matchAndSettle(conn, newOrder, buyFeesPct, sellFeesPct, quoteSymb
       marketSymbol: newOrder.market_symbol,
       executedPrice: execPrice,
       tradeQty: matchQty
-    });
+    }, coinHistoryCache);
 
     broadcastMarketTrade(io, newOrder.market_symbol, {
       execPrice,
@@ -452,14 +470,15 @@ exports.placeBuyOrder = async (req, res) => {
     const feesAmount = parseFloat(((totalAmount * buyFeesPct) / 100).toFixed(8));
     const totalDebit = parseFloat((totalAmount + feesAmount).toFixed(8));
 
-    const buyerBal = await getBalance(conn, userId, quoteSymbol);
+    const balanceCache = {};
+    const buyerBal = await getBalance(conn, userId, quoteSymbol, balanceCache);
     if (parseFloat(buyerBal.balance || 0) < totalDebit) {
       await conn.rollback();
       conn.release();
       return res.json({ status: 2, message: 'Insufficient balance.' });
     }
 
-    await adjustBalance(conn, userId, quoteSymbol, -totalDebit);
+    await adjustBalance(conn, userId, quoteSymbol, -totalDebit, balanceCache);
     await logBalanceChange(conn, {
       userId,
       currencySymbol: quoteSymbol,
@@ -467,7 +486,7 @@ exports.placeBuyOrder = async (req, res) => {
       amount: totalDebit,
       fees: feesAmount,
       ip: req.ip
-    });
+    }, balanceCache);
 
     const openDate = new Date();
     const [insertResult] = await conn.query(
@@ -487,7 +506,7 @@ exports.placeBuyOrder = async (req, res) => {
     }
 
     const io = req.app.get('io');
-    await matchAndSettle(conn, newOrder, buyFeesPct, sellFeesPct, quoteSymbol, coinSymbol, orderType, io, req.ip);
+    await matchAndSettle(conn, newOrder, buyFeesPct, sellFeesPct, quoteSymbol, coinSymbol, orderType, io, req.ip, balanceCache);
 
     let autoCancelled = false;
     if (orderType === 'MARKET') {
@@ -503,7 +522,7 @@ exports.placeBuyOrder = async (req, res) => {
         const proportionalFee = totalOrderQty > 0 ? parseFloat(((qtyLeft / totalOrderQty) * totalFee).toFixed(8)) : 0;
         const refundAmount = parseFloat((remainingAmt + proportionalFee).toFixed(8));
         await conn.query('UPDATE dbt_biding SET status = 3 WHERE id = ?', [newOrder.id]);
-        await adjustBalance(conn, userId, quoteSymbol, +refundAmount);
+        await adjustBalance(conn, userId, quoteSymbol, +refundAmount, balanceCache);
         await logBalanceChange(conn, {
           userId,
           currencySymbol: quoteSymbol,
@@ -511,7 +530,7 @@ exports.placeBuyOrder = async (req, res) => {
           amount: refundAmount,
           fees: 0,
           ip: req.ip
-        });
+        }, balanceCache);
         autoCancelled = true;
       }
     }
@@ -581,14 +600,15 @@ exports.placeSellOrder = async (req, res) => {
     const buyFeesPct = await getFeePercent(conn, 'BUY', quoteSymbol);
     const sellFeesPct = await getFeePercent(conn, 'SELL', quoteSymbol);
 
-    const sellerBal = await getBalance(conn, userId, coinSymbol);
+    const balanceCache = {};
+    const sellerBal = await getBalance(conn, userId, coinSymbol, balanceCache);
     if (parseFloat(sellerBal.balance || 0) < qty) {
       await conn.rollback();
       conn.release();
       return res.json({ status: 2, message: 'Insufficient coin balance.' });
     }
 
-    await adjustBalance(conn, userId, coinSymbol, -qty);
+    await adjustBalance(conn, userId, coinSymbol, -qty, balanceCache);
     await logBalanceChange(conn, {
       userId,
       currencySymbol: coinSymbol,
@@ -596,7 +616,7 @@ exports.placeSellOrder = async (req, res) => {
       amount: qty,
       fees: 0,
       ip: req.ip
-    });
+    }, balanceCache);
 
     let finalRate;
     let totalAmount;
@@ -643,7 +663,7 @@ exports.placeSellOrder = async (req, res) => {
     }
 
     const io = req.app.get('io');
-    await matchAndSettle(conn, newOrder, buyFeesPct, sellFeesPct, quoteSymbol, coinSymbol, orderType, io, req.ip);
+    await matchAndSettle(conn, newOrder, buyFeesPct, sellFeesPct, quoteSymbol, coinSymbol, orderType, io, req.ip, balanceCache);
 
     let autoCancelled = false;
     if (orderType === 'MARKET') {
@@ -654,7 +674,7 @@ exports.placeSellOrder = async (req, res) => {
       if (checkOrder[0]?.status === 2 && parseFloat(checkOrder[0]?.bid_qty_available || 0) > 0.000000001) {
         const qtyLeft = parseFloat(checkOrder[0].bid_qty_available);
         await conn.query('UPDATE dbt_biding SET status = 3 WHERE id = ?', [newOrder.id]);
-        await adjustBalance(conn, userId, coinSymbol, +qtyLeft);
+        await adjustBalance(conn, userId, coinSymbol, +qtyLeft, balanceCache);
         await logBalanceChange(conn, {
           userId,
           currencySymbol: coinSymbol,
@@ -662,7 +682,7 @@ exports.placeSellOrder = async (req, res) => {
           amount: qtyLeft,
           fees: 0,
           ip: req.ip
-        });
+        }, balanceCache);
         autoCancelled = true;
       }
     }
@@ -722,6 +742,7 @@ exports.cancelOrder = async (req, res) => {
 
     await conn.query('UPDATE dbt_biding SET status = 3 WHERE id = ?', [order.id]);
 
+    const balanceCache = {};
     if (order.bid_type === 'BUY') {
       const refundQty = parseFloat(order.bid_qty_available);
       const refundPrice = parseFloat(order.bid_price);
@@ -732,7 +753,7 @@ exports.cancelOrder = async (req, res) => {
       const totalRefund = parseFloat((baseRefund + proportionalFee).toFixed(8));
 
       if (totalRefund > 0.000000001) {
-        await adjustBalance(conn, userId, quoteSymbol, +totalRefund);
+        await adjustBalance(conn, userId, quoteSymbol, +totalRefund, balanceCache);
         await logBalanceChange(conn, {
           userId,
           currencySymbol: quoteSymbol,
@@ -740,12 +761,12 @@ exports.cancelOrder = async (req, res) => {
           amount: totalRefund,
           fees: 0,
           ip: req.ip
-        });
+        }, balanceCache);
       }
     } else {
       const refundQty = parseFloat(order.bid_qty_available);
       if (refundQty > 0.000000001) {
-        await adjustBalance(conn, userId, coinSymbol, +refundQty);
+        await adjustBalance(conn, userId, coinSymbol, +refundQty, balanceCache);
         await logBalanceChange(conn, {
           userId,
           currencySymbol: coinSymbol,
@@ -753,7 +774,7 @@ exports.cancelOrder = async (req, res) => {
           amount: refundQty,
           fees: 0,
           ip: req.ip
-        });
+        }, balanceCache);
       }
     }
 
