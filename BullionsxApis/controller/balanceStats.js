@@ -34,6 +34,7 @@ exports.getBalanceStats = asyncMiddleware(async (req, res) => {
         INNER JOIN (
             SELECT market_symbol, MAX(id) AS max_id
             FROM dbt_coinhistory
+            WHERE market_symbol IN (SELECT market_symbol FROM dbt_coinpair WHERE status = 1)
             GROUP BY market_symbol
         ) latest ON ch.id = latest.max_id
     `);

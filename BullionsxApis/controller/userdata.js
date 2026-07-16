@@ -164,6 +164,7 @@ exports.getPortfolio = asyncMiddleware(async (req, res) => {
             INNER JOIN (
                 SELECT market_symbol, MAX(id) AS max_id
                 FROM dbt_coinhistory
+                WHERE market_symbol IN (SELECT market_symbol FROM dbt_coinpair WHERE status = 1)
                 GROUP BY market_symbol
             ) latest ON ch.id = latest.max_id
         `);
@@ -395,7 +396,9 @@ exports.getHoldingsDetailed = asyncMiddleware(async (req, res) => {
         FROM dbt_coinhistory h1
         INNER JOIN (
             SELECT coin_symbol, MAX(id) AS max_id
-            FROM dbt_coinhistory GROUP BY coin_symbol
+            FROM dbt_coinhistory
+            WHERE coin_symbol IN (SELECT coin_symbol FROM dbt_cryptocoin WHERE status = 1)
+            GROUP BY coin_symbol
         ) h2 ON h1.coin_symbol = h2.coin_symbol AND h1.id = h2.max_id
     `);
 

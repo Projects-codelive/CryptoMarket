@@ -49,6 +49,7 @@ exports.getOverview = async (req, res) => {
         INNER JOIN (
             SELECT market_symbol, MAX(id) AS max_id
             FROM dbt_coinhistory
+            WHERE market_symbol IN (SELECT market_symbol FROM dbt_coinpair WHERE status = 1)
             GROUP BY market_symbol
         ) latest ON ch.id = latest.max_id
     `);
@@ -264,8 +265,7 @@ exports.getDeposits = async (req, res) => {
     const { coin, limit = 20, offset = 0 } = req.query;
 
     let query = `SELECT bl.* FROM dbt_balance_log bl
-                 JOIN dbt_balance b ON bl.balance_id = b.id
-                 WHERE b.user_id = ? AND bl.transaction_type IN ('DEPOSIT', 'ADMIN_BONUS')`;
+                 WHERE bl.user_id = ? AND bl.transaction_type IN ('DEPOSIT', 'ADMIN_BONUS')`;
     const params = [userId];
 
     if (coin) { query += ' AND bl.currency_symbol = ?'; params.push(coin); }
@@ -609,8 +609,7 @@ exports.getHistory = async (req, res) => {
     const { type, asset, from, to, limit = 30, offset = 0 } = req.query;
 
     let query = `SELECT bl.* FROM dbt_balance_log bl
-                 JOIN dbt_balance b ON bl.balance_id = b.id
-                 WHERE b.user_id = ?`;
+                 WHERE bl.user_id = ?`;
     const params = [userId];
 
     if (type && type !== 'all') {
@@ -633,7 +632,7 @@ exports.getHistory = async (req, res) => {
     const [rows] = await conn.query(query, params);
 
     const [countResult] = await conn.query(
-      `SELECT COUNT(*) as total FROM dbt_balance_log bl JOIN dbt_balance b ON bl.balance_id = b.id WHERE b.user_id = ?`,
+      `SELECT COUNT(*) as total FROM dbt_balance_log WHERE user_id = ?`,
       [userId]
     );
 
