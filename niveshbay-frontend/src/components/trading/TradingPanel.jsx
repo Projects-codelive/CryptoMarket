@@ -45,14 +45,6 @@ export default function TradingPanel({ symbol, currentPrice, sellFormFillData, b
 
   return (
     <div className="border-t border-[#1e2433] bg-[#0d111b] select-none">
-      <div className="flex items-center border-b border-[#1e2433] bg-[#0d111b] justify-between">
-        <div className="flex">
-          <span className="text-xs text-[#ffd333] px-4 py-2 border-b-2 border-[#ffd333] font-bold tracking-wide">
-            Spot
-          </span>
-        </div>
-      </div>
-
       <div className="flex border-b border-[#1e2433] bg-[#0d111b]">
         {['Limit', 'Market'].map(t => {
           const key = t.toLowerCase();

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { formatCurrency } from '../../utils/formatCurrency';
@@ -6,15 +5,6 @@ import { formatCurrency } from '../../utils/formatCurrency';
 export default function Navbar({ balance, portfolioValue, realizedPnl }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [search, setSearch] = useState('');
-
-  function handleSearch(e) {
-    e.preventDefault();
-    if (search.trim()) {
-      navigate(`/trade/${search.toUpperCase()}-USDT`);
-      setSearch('');
-    }
-  }
 
   return (
     <nav className="h-16 bg-[#0b0f19] border-b border-[#1e2433] flex items-center px-4 gap-4 shrink-0 justify-between select-none">
@@ -29,19 +19,6 @@ export default function Navbar({ balance, portfolioValue, realizedPnl }) {
           </span> */}
         </Link>
 
-        {/* Search Bar */}
-        <form onSubmit={handleSearch} className="hidden md:flex items-center bg-[#141822] border border-[#2b3548] rounded px-3 py-1.5 w-[260px] focus-within:border-[#f0b90b] transition">
-          <svg className="w-4 h-4 text-[#848e9c] mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search stocks & crypto..."
-            className="w-full bg-transparent text-xs text-white placeholder-[#848e9c] focus:outline-none"
-          />
-        </form>
       </div>
 
       {/* Portfolio Info & Auth Controls */}

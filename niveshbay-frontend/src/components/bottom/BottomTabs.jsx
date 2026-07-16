@@ -3,6 +3,7 @@ import { usePortfolio } from '../../hooks/usePortfolio';
 import { cancelOrder } from '../../api/orders';
 import { formatINR, formatAmount, formatCurrency } from '../../utils/formatCurrency';
 import { useSocket } from '../../context/SocketContext';
+import MarketTrades from '../market/MarketTrades';
 import toast from 'react-hot-toast';
 
 export default function BottomTabs({ symbol }) {
@@ -27,6 +28,7 @@ export default function BottomTabs({ symbol }) {
     { key: 'history', label: 'Order History' },
     { key: 'cancelled', label: `Cancelled (${cancelledOrders.length})` },
     { key: 'holdings', label: 'Holdings' },
+    { key: 'market', label: 'Market Trades' },
   ];
 
   async function handleCancelOrder(orderId) {
@@ -216,6 +218,10 @@ export default function BottomTabs({ symbol }) {
               </tbody>
             </table>
           </div>
+        )}
+
+        {activeTab === 'market' && (
+          <MarketTrades symbol={symbol} />
         )}
 
         {activeTab === 'cancelled' && (

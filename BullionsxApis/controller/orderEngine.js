@@ -44,17 +44,13 @@ async function logBalanceChange(conn, { userId, currencySymbol, transactionType,
   );
 }
 
-async function findBestCounterOrder(conn, marketSymbol, side, limitPrice, orderType, excludeUserId) {
+async function findBestCounterOrder(conn, marketSymbol, side, limitPrice, orderType) {
   if (side === 'BUY') {
     let query = "SELECT id, bid_type, bid_price, bid_qty, bid_qty_available, total_amount, amount_available, currency_symbol, market_symbol, user_id, fees_amount, status FROM dbt_biding WHERE market_symbol = ? AND status = 2 AND bid_type = 'SELL'";
     const params = [marketSymbol];
     if (orderType === 'LIMIT') {
       query += ' AND bid_price <= ?';
       params.push(limitPrice);
-    }
-    if (excludeUserId) {
-      query += ' AND user_id != ?';
-      params.push(excludeUserId);
     }
     query += ' ORDER BY bid_price ASC, open_order ASC LIMIT 1';
     const [rows] = await conn.query(query, params);
@@ -65,10 +61,6 @@ async function findBestCounterOrder(conn, marketSymbol, side, limitPrice, orderT
   if (orderType === 'LIMIT') {
     query += ' AND bid_price >= ?';
     params.push(limitPrice);
-  }
-  if (excludeUserId) {
-    query += ' AND user_id != ?';
-    params.push(excludeUserId);
   }
   query += ' ORDER BY bid_price DESC, open_order ASC LIMIT 1';
   const [rows] = await conn.query(query, params);
@@ -232,8 +224,7 @@ async function matchAndSettle(conn, newOrder, buyFeesPct, sellFeesPct, quoteSymb
       newOrder.market_symbol,
       newOrder.bid_type,
       newOrder.bid_price,
-      orderType,
-      newOrder.user_id
+      orderType
     );
     if (!counter) break;
 
